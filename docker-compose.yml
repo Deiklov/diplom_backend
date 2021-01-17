@@ -1,0 +1,18 @@
+  docker-compose.yml
+  version: "3.6"
+  services:
+    db:
+      image: postgres:latest
+      container_name: pg_db
+      volumes:
+        # настройки mysql
+        - ./mysql/conf:/etc/mysql/conf.d
+        - ./mysql/data:/var/lib/mysql
+      command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      ports:
+        - 3306:3306
+      environment:
+        MYSQL_DATABASE: go_sample
+        MYSQL_ROOT_PASSWORD: password
+        MYSQL_USER: root
+        TZ: "Asia/Tokyo"

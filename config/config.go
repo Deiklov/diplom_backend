@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-type config struct {
+type Config struct {
 	Database struct {
 		User                 string
 		Password             string
@@ -26,7 +26,7 @@ type config struct {
 	}
 }
 
-var C config
+var C Config
 
 func ReadConfig() {
 	Config := &C

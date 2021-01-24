@@ -1,9 +1,9 @@
 database:
-  user: root
-  password: root
+  user: andrey
+  password: andrey123456
   net: tcp
-  addr: 127.0.0.1:3307
-  dbname: golang-clean-architecture
+  addr: 127.0.0.1:5432
+  dbname: diplom_back_db
   allowNativePasswords: true
   params:
     parseTime: "true"

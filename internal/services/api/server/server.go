@@ -1,12 +1,10 @@
 package server
 
 import (
-	"fmt"
 	"github.com/Deiklov/diplom_backend/config"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx"
-	"golang.org/x/net/context"
-	"os"
+	_ "github.com/jackc/pgx/stdlib"
+	"github.com/labstack/echo/v4"
+	"net/http"
 )
 
 type Server struct {
@@ -27,32 +25,21 @@ func NewServer(ip string, port uint) *Server {
 func (serv *Server) Run() {
 	config.ReadConfig()
 
-	conn, err := pgx.ConnectConfig(context.Background(), &pgx.ConnConfig{
-		Config: pgconn.Config{
-			Host:            serv.IP,
-			Port:            5432,
-			Database:        serv.Conf.Database.DBName,
-			User:            serv.Conf.Database.User,
-			Password:        serv.Conf.Database.Password,
-			TLSConfig:       nil,
-			DialFunc:        nil,
-			LookupFunc:      nil,
-			BuildFrontend:   nil,
-			RuntimeParams:   nil,
-			Fallbacks:       nil,
-			ValidateConnect: nil,
-			AfterConnect:    nil,
-			OnNotice:        nil,
-			OnNotification:  nil,
-		},
-		Logger:               nil,
-		LogLevel:             0,
-		BuildStatementCache:  nil,
-		PreferSimpleProtocol: false,
+	//connectionString := fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%d",
+	//	serv.Conf.Database.DBName, serv.Conf.Database.User, serv.Conf.Database.Password, serv.IP, 5432)
+	//_, err := sqlx.Connect("pgx", connectionString)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//_, err = pgxpool.Connect(context.Background(), connectionString)
+	//
+	//if err != nil {
+	//	panic(err)
+	//}
+	router := echo.New()
+	router.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
 	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
-	}
-	defer conn.Close(context.Background())
+	router.Logger.Fatal(router.Start(":8080"))
+
 }

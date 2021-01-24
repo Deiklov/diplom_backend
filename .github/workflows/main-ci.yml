@@ -2,7 +2,7 @@ name: Docker-way build
 
 on:
   push:
-    branches: [master, deploy]
+    branches: [main, dev]
 
 
 jobs:
@@ -12,19 +12,14 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: DockerHub login
-        run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USER }} --password-stdin
 
       - name: Create Builder, application images
         run: |
-          docker build -t drello-builder -f docker/builder.Dockerfile .
-          docker build -t ${{ secrets.DOCKERHUB_REPO }}:session-${GITHUB_SHA::8} -f docker/session.Dockerfile .
-          docker build -t ${{ secrets.DOCKERHUB_REPO }}:user-${GITHUB_SHA::8} -f docker/user.Dockerfile .
           docker build -t ${{ secrets.DOCKERHUB_REPO }}:api-${GITHUB_SHA::8} -f docker/api.Dockerfile .
 
       - name: Push application images
         run: |
-          docker push ${{ secrets.DOCKERHUB_REPO }}:session-${GITHUB_SHA::8}
-          docker push ${{ secrets.DOCKERHUB_REPO }}:user-${GITHUB_SHA::8}
           docker push ${{ secrets.DOCKERHUB_REPO }}:api-${GITHUB_SHA::8}
 
   deploy:
@@ -35,11 +30,10 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           envs: GITHUB_SHA
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.PRIVATE_KEY }}
+          host: ${{ secrets.BACK_HOST }}
+          username: ${{ secrets.BACK_USER }}
+          password: ${{ secrets.BACK_PASSWORD }}
           script: |
-            echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-            sudo docker pull ${{ secrets.DOCKERHUB_REPO }}:session-${GITHUB_SHA::8}
-            sudo docker pull ${{ secrets.DOCKERHUB_REPO }}:user-${GITHUB_SHA::8}
+            echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USER }} --password-stdin
+            cd diplom_backend/
             sudo docker pull ${{ secrets.DOCKERHUB_REPO }}:api-${GITHUB_SHA::8}

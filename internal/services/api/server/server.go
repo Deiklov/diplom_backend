@@ -14,7 +14,7 @@ type Server struct {
 }
 
 func NewServer(ip string, port uint) *Server {
-	config.ReadConfig()
+	//config.ReadConfig()
 	return &Server{
 		IP:   ip,
 		Port: port,
@@ -23,7 +23,7 @@ func NewServer(ip string, port uint) *Server {
 }
 
 func (serv *Server) Run() {
-	config.ReadConfig()
+	//config.ReadConfig()
 
 	//connectionString := fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%d",
 	//	serv.Conf.Database.DBName, serv.Conf.Database.User, serv.Conf.Database.Password, serv.IP, 5432)

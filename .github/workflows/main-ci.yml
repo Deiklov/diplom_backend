@@ -37,9 +37,9 @@ jobs:
             echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USER }} --password-stdin
             cd diplom_backend/
             docker pull ${{ secrets.DOCKERHUB_REPO }}:latest
-            export APICONTID=$(docker ps -q --filter ancestor=${{ secrets.DOCKERHUB_REPO }}:latest )
+            export APICONTID=$(docker ps -q --filter "name=back-api")
             docker stop $APICONTID
             docker rm $APICONTID
-            docker run -d -p 8080:8080 ${{ secrets.DOCKERHUB_REPO }}:latest
+            docker run -d -p 8080:8080 --name back-api ${{ secrets.DOCKERHUB_REPO }}:latest
             docker container prune -f
             docker image prune -f

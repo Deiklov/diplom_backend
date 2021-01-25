@@ -1,4 +1,4 @@
-  version: "3.6"
+  version: "3.8"
   services:
     pg_db:
       image: postgres:13.1
@@ -12,15 +12,9 @@
       ports:
         - ${POSTGRES_PORT:-5432}:5432
     webserver:
-      env_file:
-        - .env
-      image: nginx:alpine
-      container_name: webserver
-      restart: unless-stopped
-
+      build:
+        context: docker
+        dockerfile: api.Dockerfile
+      container_name: back-api
       ports:
-        - "80:80"
-        - "443:443"
-#      volumes:
-#        - ./:/var/www
-#        - ./nginx/conf.d/:/etc/nginx/conf.d/
+        - "8080:8080"

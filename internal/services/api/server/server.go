@@ -37,8 +37,17 @@ func (serv *Server) Run() {
 	//	panic(err)
 	//}
 	router := echo.New()
-	router.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
+	router.GET("/api/kek", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World! kek")
+	})
+	router.GET("/api/kek/:shpek", func(c echo.Context) error {
+		return c.String(http.StatusCreated, "Hello, World! shpek")
+	})
+	router.GET("/api/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World! api ")
+	})
+	router.GET("/api/mda", func(c echo.Context) error {
+		return c.String(http.StatusNoContent, "mdamdamda ")
 	})
 	router.Logger.Fatal(router.Start(":8080"))
 

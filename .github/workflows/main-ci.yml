@@ -16,11 +16,11 @@ jobs:
 
       - name: Create Builder, application images
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_REPO }}:api-${GITHUB_SHA::8} -f docker/api.Dockerfile .
+          docker build -t ${{ secrets.DOCKERHUB_REPO }}:latest -f docker/api.Dockerfile .
 
       - name: Push application images
         run: |
-          docker push ${{ secrets.DOCKERHUB_REPO }}:api-${GITHUB_SHA::8}
+          docker push ${{ secrets.DOCKERHUB_REPO }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -36,4 +36,10 @@ jobs:
           script: |
             echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USER }} --password-stdin
             cd diplom_backend/
-            sudo docker pull ${{ secrets.DOCKERHUB_REPO }}:api-${GITHUB_SHA::8}
+            docker pull ${{ secrets.DOCKERHUB_REPO }}:latest
+            export APICONTID=$(docker ps -q --filter ancestor=${{ secrets.DOCKERHUB_REPO }}:latest )
+            docker stop $APICONTID
+            docker rm $APICONTID
+            docker run -d -p 8080:8080 ${{ secrets.DOCKERHUB_REPO }}:latest
+            docker container prune -f
+            docker image prune -f

@@ -37,3 +37,20 @@ func (s *TestSuite) TestUserCreate() {
 	})
 	s.Nil(err)
 }
+func (s *TestSuite) TestUserGet() {
+	userID := faker.UUIDHyphenated()
+	userName := faker.Name()
+	userPhone := faker.Phonenumber()
+	err := s.userrep.Create(&models.User{
+		ID:    userID,
+		Name:  userName,
+		Phone: userPhone,
+	})
+	userDB, err := s.userrep.GetByID(userID)
+	s.NotNil(userDB)
+	s.Equal(userDB.ID, userID)
+	s.Equal(userDB.Name, userName)
+	s.Equal(userDB.Phone, userPhone)
+
+	s.Nil(err)
+}

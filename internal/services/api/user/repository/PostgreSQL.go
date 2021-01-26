@@ -1,62 +1,63 @@
 package repository
 
 import (
+	"database/sql"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user"
 	errOwn "github.com/Deiklov/diplom_backend/pkg/errors"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
-	"github.com/jinzhu/gorm"
+	"github.com/doug-martin/goqu/v9"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jmoiron/sqlx"
 )
 
 type UserStore struct {
-	DB *gorm.DB
+	DB     *sql.DB
+	goquDb *goqu.Database
+	dbsqlx *sqlx.DB
 }
 
-func CreateRepository(db *gorm.DB) user.Repository {
-	return &UserStore{DB: db}
-}
-
-func (userStore *UserStore) Create(usr *models.User) error {
-	if err := userStore.DB.Create(usr).Error; err != nil {
-		logger.Error(err)
-		return errOwn.ErrConflict
+func CreateRepository(db *sql.DB) user.Repository {
+	return &UserStore{
+		DB:     db,
+		dbsqlx: sqlx.NewDb(db, "postgres"),
+		goquDb: goqu.New("postgres", db),
 	}
-	return nil
 }
 
-func (userStore *UserStore) GetByID(id uint) (*models.User, error) {
-	usr := new(models.User)
-	if err := userStore.DB.Where("id = ?", id).First(&usr).Error; err != nil {
-		logger.Error(err)
-		return nil, errOwn.ErrUserNotFound
-	}
-	return usr, nil
-}
-
-func (userStore *UserStore) GetByNickname(nickname string) (*models.User, error) {
-	usr := new(models.User)
-	if err := userStore.DB.Where("nickname = ?", nickname).First(&usr).Error; err != nil {
-		logger.Error(err)
-		return nil, errOwn.ErrUserNotFound
-	}
-	return usr, nil
-}
-
-func (userStore *UserStore) Delete(id uint) error {
-	if err := userStore.DB.Where("id = ?", id).Delete(models.User{}).Error; err != nil {
-		logger.Error(err)
-		return errOwn.ErrUserNotFound
-	}
-	return nil
-}
-
-func (userStore *UserStore) GetUsersByNicknamePart(nicknamePart string, limit uint) ([]models.User, error) {
-	var users []models.User
-	err := userStore.DB.Limit(limit).Where("nickname LIKE ?", nicknamePart+"%").Find(&users).Error
+func (urep *UserStore) Create(user *models.User) error {
+	_, err := urep.goquDb.Insert("users").Cols("id", "phone", "name").
+		Vals(goqu.Vals{user.ID, user.Phone, user.Name}).Executor().Exec()
 	if err != nil {
 		logger.Error(err)
-		return nil, errOwn.ErrUserNotFound
+		return errOwn.ErrDbBadOperation
 	}
-	return users, nil
+	return nil
+}
+
+func (urep *UserStore) GetByID(id string) (*models.User, error) {
+	usr := models.User{}
+	sql, args, err := urep.goquDb.From("users").
+		Select("id", "phone", "created_at", "updated_at", "name").
+		Where(goqu.C("id").Eq(id)).ToSQL()
+	if err != nil {
+		logger.Error(err)
+		return nil, errOwn.ErrDbBadOperation
+	}
+	err = urep.dbsqlx.QueryRow(sql, args).Scan(&usr)
+	if err != nil {
+		logger.Error(err)
+		return nil, errOwn.ErrDbBadOperation
+	}
+	return &usr, nil
+}
+
+
+func (urep *UserStore) Delete(id string) error {
+	_, err := urep.goquDb.Delete("users").Where(goqu.C("id").Eq(id)).Executor().Exec()
+	if err != nil {
+		logger.Error(err)
+		return errOwn.ErrDbBadOperation
+	}
+	return nil
 }

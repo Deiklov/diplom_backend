@@ -11,10 +11,18 @@
 #        - ./:/var/lib/postgresql/data
       ports:
         - ${POSTGRES_PORT:-5432}:5432
-    webserver:
+    back-api:
       build:
         context: docker
         dockerfile: api.Dockerfile
       container_name: back-api
       ports:
         - "8080:8080"
+    nginx:
+      build:
+        context: docker
+        dockerfile: nginx.Dockerfile
+      container_name: nginx
+      ports:
+        - "80:80"
+        - "443:443"

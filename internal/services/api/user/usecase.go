@@ -5,9 +5,8 @@ import (
 )
 
 type UseCase interface {
-	Create(user *models.User, sessionExpires int32) (string, error)
-	GetByID(uid uint) (*models.User, error)
-	GetByNickname(nickname string) (*models.User, error)
-	GetUsersByNicknamePart(nicknamePart string, limit uint) ([]models.User, error)
-	Delete(uid uint, sid string) error
+	Create(user *models.User) error
+	GetByID(id string) (*models.User, error)
+	Delete(id string) error
 }
+

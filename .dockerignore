@@ -1,0 +1,6 @@
+pgdata
+.git
+.cache
+README.md
+.github
+.gitignore

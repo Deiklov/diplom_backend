@@ -26,8 +26,8 @@ func CreateRepository(db *sql.DB) user.Repository {
 }
 
 func (urep *UserStore) Create(user *models.User) error {
-	_, err := urep.goquDb.Insert("users").Cols("id", "phone", "name").
-		Vals(goqu.Vals{user.ID, user.Phone, user.Name}).Executor().Exec()
+	_, err := urep.goquDb.Insert("users").Cols("id", "email", "name", "password").
+		Vals(goqu.Vals{user.ID, user.Email, user.Name, user.Password}).Executor().Exec()
 	if err != nil {
 		logger.Error(err)
 		return errOwn.ErrDbBadOperation
@@ -38,7 +38,7 @@ func (urep *UserStore) Create(user *models.User) error {
 func (urep *UserStore) GetByID(id string) (*models.User, error) {
 	usr := models.User{}
 	sql, _, err := urep.goquDb.From("users").
-		Select("id", "phone", "created_at", "updated_at", "name").
+		Select("id", "email", "created_at", "updated_at", "name").
 		Where(goqu.C("id").Eq(id)).ToSQL()
 	if err != nil {
 		logger.Error(err)
@@ -60,4 +60,22 @@ func (urep *UserStore) Delete(id string) error {
 		return errOwn.ErrDbBadOperation
 	}
 	return nil
+}
+
+func (urep *UserStore) GetByEmail(email string) (*models.User, error) {
+	usr := models.User{}
+	sql, _, err := urep.goquDb.From("users").
+		Select("id", "email", "created_at", "updated_at", "name").
+		Where(goqu.C("email").Eq(email)).ToSQL()
+	if err != nil {
+		logger.Error(err)
+		return nil, errOwn.ErrDbBadOperation
+	}
+	//maybe reflect
+	err = urep.dbsqlx.QueryRowx(sql).StructScan(&usr)
+	if err != nil {
+		logger.Error(err)
+		return nil, errOwn.ErrDbBadOperation
+	}
+	return &usr, nil
 }

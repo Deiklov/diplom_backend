@@ -20,8 +20,9 @@ RUN go build -o ./api .
 # Start fresh from a smaller image
 FROM alpine:3.9
 RUN apk add ca-certificates
-
+RUN ls
 COPY --from=build_base /app/api /app/api
+COPY config /app/config
 
 # This container exposes port 8080 to the outside world
 EXPOSE 8080

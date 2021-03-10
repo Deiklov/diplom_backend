@@ -38,7 +38,7 @@ func (rep *CompanyRepImpl) CreateCompany(cmpny models.Company) (*models.Company,
 }
 
 func (rep *CompanyRepImpl) GetFavoriteList(userID string, company models.Company) ([]*models.Company, error) {
-	sql, _, err := rep.goquDb.Select("company_by_users").Join(goqu.T("companies"),
+	sql, _, err := rep.goquDb.From("company_by_users").Join(goqu.T("companies"),
 		goqu.On(goqu.Ex{"company_by_users.company_id": goqu.I("companies.id")})).
 		Where(goqu.C("user_id").Eq(userID)).ToSQL()
 	companies := []models.Company{}
@@ -51,7 +51,6 @@ func (rep *CompanyRepImpl) GetFavoriteList(userID string, company models.Company
 }
 
 func (rep *CompanyRepImpl) AddFavorite(userID string, company models.Company) error {
-
 	_, err := rep.goquDb.Insert("company_by_users").Cols("id", "company_id", "user_id").
 		Vals(goqu.Vals{uuid.New().String(), company.ID, userID}).
 		Executor().Exec()

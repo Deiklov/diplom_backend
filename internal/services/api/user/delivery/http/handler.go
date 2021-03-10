@@ -25,8 +25,8 @@ func AddRoutesWithHandler(router *echo.Echo, useCase user.UseCase) {
 	router.GET("/api/v1/user/:id_or_nickname", handler.Get, middleware.JWT([]byte("secret")))
 	router.PUT("/api/v1/user", handler.Update, middleware.JWT([]byte("secret")))
 	router.DELETE("/api/v1/user", handler.Delete, middleware.JWT([]byte("secret")))
-	router.GET("/api/v1/whoami", handler.Get, middleware.JWT([]byte("secret")))
-	router.POST("/api/v1/login", handler.Login, middleware.JWT([]byte("secret")))
+	router.GET("/api/v1/user", handler.Get, middleware.JWT([]byte("secret")))
+	router.POST("/api/v1/login", handler.Login)
 
 }
 func (usHttp *UserHttp) Create(ctx echo.Context) error {
@@ -62,13 +62,37 @@ func (usHttp *UserHttp) Create(ctx echo.Context) error {
 		"token": token,
 	})
 }
-
+func (usHttp *UserHttp) parseUser(userClaims map[string]interface{}) (*models.User, error) {
+	createdAt, err := time.Parse(time.RFC3339, userClaims["created_at"].(string))
+	if err != nil {
+		return nil, err
+	}
+	updatedAt, err := time.Parse(time.RFC3339, userClaims["updated_at"].(string))
+	if err != nil {
+		return nil, err
+	}
+	userData := &models.User{
+		ID:        userClaims["id"].(string),
+		Name:      userClaims["name"].(string),
+		Email:     userClaims["email"].(string),
+		CreatedAt: &createdAt,
+		UpdatedAt: &updatedAt,
+		DeletedAt: nil,
+		Password:  "",
+	}
+	return userData, nil
+}
 func (usHttp *UserHttp) Get(ctx echo.Context) error {
 
 	userCurr := ctx.Get("user").(*jwt.Token)
 	claims := userCurr.Claims.(jwt.MapClaims)
-	name := claims["name"].(string)
-	return ctx.String(http.StatusOK, "kek "+name)
+	userClaims := claims["user"].(map[string]interface{})
+	userData, err := usHttp.parseUser(userClaims)
+	if err != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+
+	return ctx.JSON(http.StatusBadRequest, userData)
 }
 
 func (usHttp *UserHttp) GetAll(ctx echo.Context) error {

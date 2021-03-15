@@ -92,7 +92,7 @@ func (usHttp *UserHttp) Get(ctx echo.Context) error {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
 
-	return ctx.JSON(http.StatusBadRequest, userData)
+	return ctx.JSON(http.StatusOK, userData)
 }
 
 func (usHttp *UserHttp) GetAll(ctx echo.Context) error {

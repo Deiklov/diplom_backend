@@ -21,13 +21,13 @@ services:
 #    ports:
 #      - "80:80"
 #      - "443:443"
-  back-api:
-    build:
-      context: ./
-      dockerfile: docker/api.Dockerfile
-    depends_on:
-        - pg_db
-    container_name: back-api
-    ports:
-      - "8080:8080"
-    network_mode: host
+#  back-api:
+#    build:
+#      context: ./
+#      dockerfile: docker/api.Dockerfile
+#    depends_on:
+#        - pg_db
+#    container_name: back-api
+#    ports:
+#      - "8080:8080"
+#    network_mode: host

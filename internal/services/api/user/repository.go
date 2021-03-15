@@ -10,4 +10,5 @@ type Repository interface {
 	GetByID(id string) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
 	Delete(id string) error
+	Update(user *models.User) (*models.User, error)
 }

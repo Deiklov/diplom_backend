@@ -101,8 +101,22 @@ func (usHttp *UserHttp) GetAll(ctx echo.Context) error {
 }
 
 func (usHttp *UserHttp) Update(ctx echo.Context) error {
-
-	return ctx.NoContent(http.StatusOK)
+	usr := models.User{}
+	if err := ctx.Bind(&usr); err != nil {
+		logger.Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse user data")
+	}
+	_, err := govalidator.ValidateStruct(usr)
+	if err != nil {
+		logger.Error(err)
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+	userFromDB, err := usHttp.UseCase.Update(&usr)
+	if err != nil {
+		logger.Error(err)
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+	return ctx.JSON(http.StatusOK, userFromDB)
 }
 
 func (usHttp *UserHttp) Delete(ctx echo.Context) error {

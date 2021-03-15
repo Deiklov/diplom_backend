@@ -21,6 +21,9 @@ func (uc *userUCase) Create(user *models.User) error {
 	user.Password = pass
 	return uc.userRepo.Create(user)
 }
+func (uc *userUCase) Update(user *models.User) (*models.User, error) {
+	return uc.userRepo.Update(user)
+}
 func (uc *userUCase) HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err

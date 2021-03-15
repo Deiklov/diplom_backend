@@ -54,3 +54,18 @@ func (s *TestSuite) TestUserGet() {
 
 	s.Nil(err)
 }
+func (s *TestSuite) TestUserUpdate() {
+	userID := "044ae442-ae48-4096-b2b8-5809733089e1"
+	userName := faker.Name()
+	userEmail := faker.Email()
+	usrFromDB, err := s.userrep.Update(&models.User{
+		ID:    userID,
+		Name:  userName,
+		Email: userEmail,
+	})
+	s.NotNil(usrFromDB)
+	s.Equal(userEmail, usrFromDB.Email)
+	s.Equal(userName, usrFromDB.Name)
+
+	s.Nil(err)
+}

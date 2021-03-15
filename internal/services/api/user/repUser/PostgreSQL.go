@@ -9,6 +9,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/jmoiron/sqlx"
+	"time"
 )
 
 type UserStore struct {
@@ -60,6 +61,33 @@ func (urep *UserStore) Delete(id string) error {
 		return errOwn.ErrDbBadOperation
 	}
 	return nil
+}
+func (urep *UserStore) Update(user *models.User) (*models.User, error) {
+	usrFromDB := models.User{}
+	updateFields := make(map[string]interface{})
+	updateFields["updated_at"] = time.Now()
+
+	stmt := urep.goquDb.Update("users").
+		Where(goqu.C("id").Eq(user.ID)).
+		Returning("id", "email", "created_at", "updated_at", "name")
+	if user.Name != "" {
+		updateFields["name"] = user.Name
+	}
+	if user.Email != "" {
+		updateFields["email"] = user.Email
+	}
+	stmt=stmt.Set(updateFields)
+	sql, _, err := stmt.ToSQL()
+	if err != nil {
+		logger.Error(err)
+		return nil, errOwn.ErrDbBadOperation
+	}
+	err = urep.dbsqlx.QueryRowx(sql).StructScan(&usrFromDB)
+	if err != nil {
+		logger.Error(err)
+		return nil, errOwn.ErrDbBadOperation
+	}
+	return &usrFromDB, nil
 }
 
 func (urep *UserStore) GetByEmail(email string) (*models.User, error) {

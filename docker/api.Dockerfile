@@ -23,9 +23,10 @@ RUN apk add ca-certificates
 RUN ls
 COPY --from=build_base /app/api /app/api
 COPY config /app/config
+WORKDIR /app
 
 # This container exposes port 8080 to the outside world
 EXPOSE 8080
 
 # Run the binary program produced by `go install`
-CMD ["/app/api"]
+CMD ["./api"]

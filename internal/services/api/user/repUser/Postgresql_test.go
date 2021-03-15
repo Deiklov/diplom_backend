@@ -1,4 +1,4 @@
-package repository
+package repUser
 
 import (
 	goSQL "database/sql"
@@ -33,7 +33,39 @@ func (s *TestSuite) TestUserCreate() {
 	err := s.userrep.Create(&models.User{
 		ID:    faker.UUIDHyphenated(),
 		Name:  faker.Name(),
-		Phone: faker.Phonenumber(),
+		Email: faker.Email(),
 	})
+	s.Nil(err)
+}
+func (s *TestSuite) TestUserGet() {
+	userID := faker.UUIDHyphenated()
+	userName := faker.Name()
+	userEmail := faker.Email()
+	err := s.userrep.Create(&models.User{
+		ID:    userID,
+		Name:  userName,
+		Email: userEmail,
+	})
+	userDB, err := s.userrep.GetByID(userID)
+	s.NotNil(userDB)
+	s.Equal(userDB.ID, userID)
+	s.Equal(userDB.Name, userName)
+	s.Equal(userDB.Email, userEmail)
+
+	s.Nil(err)
+}
+func (s *TestSuite) TestUserUpdate() {
+	userID := "044ae442-ae48-4096-b2b8-5809733089e1"
+	userName := faker.Name()
+	userEmail := faker.Email()
+	usrFromDB, err := s.userrep.Update(&models.User{
+		ID:    userID,
+		Name:  userName,
+		Email: userEmail,
+	})
+	s.NotNil(usrFromDB)
+	s.Equal(userEmail, usrFromDB.Email)
+	s.Equal(userName, usrFromDB.Name)
+
 	s.Nil(err)
 }

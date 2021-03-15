@@ -2,7 +2,7 @@ name: Docker-way build
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, deploy]
 
 
 jobs:

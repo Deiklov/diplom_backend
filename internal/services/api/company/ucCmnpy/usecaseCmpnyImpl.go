@@ -9,7 +9,13 @@ type CompanyUCImpl struct {
 	rep company.CompanyRepI
 }
 
-func (uc *CompanyUCImpl) Create(company models.Company) (models.Company, error) {
+func CreateUseCase(cmpnyRepo_ company.CompanyRepI) company.CompanyUCI {
+	return &CompanyUCImpl{
+		rep: cmpnyRepo_,
+	}
+}
+
+func (uc *CompanyUCImpl) Create(company models.Company) (*models.Company, error) {
 	return uc.rep.CreateCompany(company)
 }
 

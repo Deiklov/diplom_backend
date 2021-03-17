@@ -22,10 +22,10 @@ func AddRoutesWithHandler(router *echo.Echo, useCase user.UseCase) {
 		UseCase: useCase,
 	}
 	router.POST("/api/v1/user", handler.Create)
-	router.GET("/api/v1/user/:id_or_nickname", handler.Get, middleware.JWT([]byte("secret")))
-	router.PUT("/api/v1/user", handler.Update, middleware.JWT([]byte("secret")))
-	router.DELETE("/api/v1/user", handler.Delete, middleware.JWT([]byte("secret")))
-	router.GET("/api/v1/user", handler.Get, middleware.JWT([]byte("secret")))
+	router.GET("/api/v1/user/:id_or_nickname", handler.Get, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
+	router.PUT("/api/v1/user", handler.Update, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
+	router.DELETE("/api/v1/user", handler.Delete, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
+	router.GET("/api/v1/user", handler.Get, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
 	router.POST("/api/v1/login", handler.Login)
 
 }

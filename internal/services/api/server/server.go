@@ -4,6 +4,9 @@ import (
 	goSQL "database/sql"
 	"fmt"
 	"github.com/Deiklov/diplom_backend/config"
+	"github.com/Deiklov/diplom_backend/internal/services/api/company/dlyCmnpy"
+	"github.com/Deiklov/diplom_backend/internal/services/api/company/repCmpny"
+	"github.com/Deiklov/diplom_backend/internal/services/api/company/ucCmnpy"
 	httpUser "github.com/Deiklov/diplom_backend/internal/services/api/user/delivery/http"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/repUser"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/ucUser"
@@ -45,7 +48,7 @@ func (serv *Server) Run() {
 		Skipper: middleware.DefaultSkipper,
 		AllowOrigins: []string{"https://localhost:80", "http://localhost:80", "https://bmstu-romanov.xyz",
 			"http://bmstu-romanov.xyz", "https://localhost:3000", "http://localhost:3000",
-			"http://23.111.206.228:80", "https://23.111.206.228:80","http://23.111.206.228:8080","https://23.111.206.228:8080"},
+			"http://23.111.206.228:80", "https://23.111.206.228:80", "http://23.111.206.228:8080", "https://23.111.206.228:8080"},
 		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut,
 			http.MethodPatch, http.MethodPost, http.MethodDelete},
 		AllowHeaders:     nil,
@@ -54,12 +57,24 @@ func (serv *Server) Run() {
 		MaxAge:           0,
 	}))
 	//router.Use(middleware.CSRFWithConfig(middleware.DefaultCSRFConfig))
-	router.Use(middleware.LoggerWithConfig(middleware.DefaultLoggerConfig))
+	router.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Skipper: middleware.DefaultSkipper,
+		Format: `{"time":"${time_custom}","id":"${id}","remote_ip":"${remote_ip}",` +
+			`"host":"${host}","method":"${method}","uri":"${uri}","user_agent":"${user_agent}",` +
+			`"status":${status},"error":"${error}","latency_human":"${latency_human}"` +
+			`,"bytes_out":${bytes_out}}` + "\n",
+		CustomTimeFormat: "2006-01-02 15:04:05",
+	}))
+	//router.Use(middleware.LoggerWithConfig(middleware.DefaultLoggerConfig))
 	router.Use(middleware.Recover())
 
 	userRepo := repUser.CreateRepository(pdb)
 	userUC := ucUser.CreateUseCase(userRepo)
-	httpUser.AddRoutesWithHandler(router, userUC)
+	httpUser.AddRoutesWithHandler(router, userUC) //добавит юзерские роуты
+
+	cmpnyRepo := repCmpny.CreateRepCmpny(pdb)
+	cmpnyUCase := ucCmnpy.CreateUseCase(cmpnyRepo)
+	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase) //добавит роуты компании
 
 	router.Logger.Fatal(router.Start(":8080"))
 

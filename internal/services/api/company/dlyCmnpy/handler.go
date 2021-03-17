@@ -18,12 +18,15 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI) {
 	handler := &CompanyHttp{
 		UseCase: useCase,
 	}
+	mwareJWT := middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
+
 	router.POST("/api/v1/company", handler.Create)
-	router.GET("/api/v1/user/:id_or_nickname", handler.Get, middleware.JWT([]byte("secret")))
-	router.PUT("/api/v1/user", handler.Update, middleware.JWT([]byte("secret")))
-	router.DELETE("/api/v1/user", handler.Delete, middleware.JWT([]byte("secret")))
-	router.GET("/api/v1/whoami", handler.Get, middleware.JWT([]byte("secret")))
-	router.POST("/api/v1/login", handler.Login, middleware.JWT([]byte("secret")))
+	router.GET("/api/v1/companies/favorite", handler.GetFavoriteList, mwareJWT)
+	router.GET("/api/v1/companies", handler.GetAllCompaniesList)
+	router.DELETE("/api/v1/company/favorite", handler.DeleteFavorite, mwareJWT)
+	router.POST("/api/v1/company/favorite", handler.AddFavorite, mwareJWT)
+	router.GET("/api/v1/company/favorite", handler.PersonalCompanyPage)
+	router.GET("/api/v1/company/predict", handler.CompanyPredict, mwareJWT)
 
 }
 func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
@@ -37,6 +40,38 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 		logger.Error(err)
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	usHttp.UseCase.Create()
-	return nil
+	cmpnyFromDB, err := usHttp.UseCase.Create(cmpny)
+	if err != nil {
+		logger.Error(err, ctx.Request().Body)
+	}
+	return ctx.JSON(http.StatusOK, cmpnyFromDB)
+}
+
+func (usHttp *CompanyHttp) DeleteFavorite(ctx echo.Context) error {
+	return ctx.String(200, "del favorite ")
+
+}
+
+func (usHttp *CompanyHttp) AddFavorite(ctx echo.Context) error {
+	return ctx.String(200, "add favorite")
+
+}
+
+func (usHttp *CompanyHttp) GetFavoriteList(ctx echo.Context) error {
+	return ctx.String(200, "favorite list")
+
+}
+
+func (usHttp *CompanyHttp) GetAllCompaniesList(ctx echo.Context) error {
+	return ctx.String(200, "all companies list")
+}
+
+func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
+	return ctx.String(200, "full info company")
+
+}
+
+func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
+	return ctx.String(200, "predict company")
+
 }

@@ -21,11 +21,12 @@ func AddRoutesWithHandler(router *echo.Echo, useCase user.UseCase) {
 	handler := &UserHttp{
 		UseCase: useCase,
 	}
+	mwareJWT := middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
 	router.POST("/api/v1/user", handler.Create)
-	router.GET("/api/v1/user/:id_or_nickname", handler.Get, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
-	router.PUT("/api/v1/user", handler.Update, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
-	router.DELETE("/api/v1/user", handler.Delete, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
-	router.GET("/api/v1/user", handler.Get, middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803")))
+	router.GET("/api/v1/user/:id_or_nickname", handler.Get, mwareJWT)
+	router.PUT("/api/v1/user", handler.Update, mwareJWT)
+	router.DELETE("/api/v1/user", handler.Delete, mwareJWT)
+	router.GET("/api/v1/user", handler.Get, mwareJWT)
 	router.POST("/api/v1/login", handler.Login)
 
 }
@@ -47,7 +48,7 @@ func (usHttp *UserHttp) Create(ctx echo.Context) error {
 		Password: usr.Password,
 	}); err != nil {
 		logger.Error(err)
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	token, err := usHttp.login(&models.AuthData{
 		Email:    usr.Email,
@@ -154,7 +155,7 @@ func (usHttp *UserHttp) login(data *models.AuthData) (string, error) {
 	}
 	claims["user"] = usr
 	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
-	t, err := token.SignedString([]byte("secret"))
+	t, err := token.SignedString([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
 	if err != nil {
 		return "", err
 	}

@@ -8,6 +8,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/doug-martin/goqu/v9 v9.10.0
+	github.com/getsentry/sentry-go v0.10.0
 	github.com/google/uuid v1.2.0
 	github.com/jackc/pgconn v1.8.0
 	github.com/jackc/pgx v3.6.2+incompatible

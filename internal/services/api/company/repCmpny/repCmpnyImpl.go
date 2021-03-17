@@ -28,7 +28,7 @@ func CreateRepCmpny(db *sql.DB) company.CompanyRepI {
 func (rep *CompanyRepImpl) CreateCompany(cmpny models.Company) (*models.Company, error) {
 	cmpnyFromDb := models.Company{}
 	ok, err := rep.goquDb.Insert("companies").Cols("id", "name", "year", "description").
-		Vals(goqu.Vals{cmpny.ID, cmpny.Name, cmpny.Year, cmpny.Description}).
+		Vals(goqu.Vals{uuid.New().String(), cmpny.Name, cmpny.Year, cmpny.Description}).
 		Returning("id", "name", "year", "description").Executor().ScanStruct(&cmpnyFromDb)
 	if err != nil || !ok {
 		logger.Error(err)

@@ -25,12 +25,6 @@ type (
 		Email    string `json:"email" valid:"required,email"`
 		Password string `json:"password" valid:"required,ascii"`
 	}
-	Company struct {
-		ID          string `json:"id"`
-		Name        string `json:"name" valid:"required,ascii"`
-		Year        uint32 `json:"founded_at" valid:"optional,int"`
-		Description string `json:"description" valid:"optional,ascii"`
-	}
 )
 
 func (User) TableName() string { return "users" }

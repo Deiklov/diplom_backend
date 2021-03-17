@@ -10,11 +10,11 @@ import (
 	httpUser "github.com/Deiklov/diplom_backend/internal/services/api/user/delivery/http"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/repUser"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/ucUser"
+	"github.com/labstack/echo/v4"
 	"net/http"
 
 	//"github.com/doug-martin/goqu/v9"
 	_ "github.com/jackc/pgx/stdlib"
-	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"os"
 )
@@ -65,6 +65,14 @@ func (serv *Server) Run() {
 			`,"bytes_out":${bytes_out}}` + "\n",
 		CustomTimeFormat: "2006-01-02 15:04:05",
 	}))
+
+	//if err := sentry.Init(sentry.ClientOptions{
+	//	Dsn: "https://325b0bf7ab154d349f3e51010d1964e7@o553507.ingest.sentry.io/5680876",
+	//}); err != nil {
+	//	logger.Fatal(err)
+	//}
+	//router.Use(sentryecho.New(sentryecho.Options{}))
+	//sentry.CaptureMessage("It works!")
 	//router.Use(middleware.LoggerWithConfig(middleware.DefaultLoggerConfig))
 	router.Use(middleware.Recover())
 

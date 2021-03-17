@@ -43,11 +43,18 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 	cmpnyFromDB, err := usHttp.UseCase.Create(cmpny)
 	if err != nil {
 		logger.Error(err, ctx.Request().Body)
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, cmpnyFromDB)
 }
 
 func (usHttp *CompanyHttp) DeleteFavorite(ctx echo.Context) error {
+	name := models.LikeUnlikeCompany{}
+	if err := ctx.Bind(&name); err != nil {
+		logger.Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse company data")
+	}
+	//usHttp.UseCase.DelFavorite()
 	return ctx.String(200, "del favorite ")
 
 }

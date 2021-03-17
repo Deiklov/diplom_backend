@@ -10,6 +10,7 @@ import (
 	httpUser "github.com/Deiklov/diplom_backend/internal/services/api/user/delivery/http"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/repUser"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/ucUser"
+	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 	"net/http"
 
@@ -75,6 +76,8 @@ func (serv *Server) Run() {
 	//sentry.CaptureMessage("It works!")
 	//router.Use(middleware.LoggerWithConfig(middleware.DefaultLoggerConfig))
 	router.Use(middleware.Recover())
+	p := prometheus.NewPrometheus("echo", nil)
+	p.Use(router)
 
 	userRepo := repUser.CreateRepository(pdb)
 	userUC := ucUser.CreateUseCase(userRepo)

@@ -115,7 +115,7 @@ func dummyData() []*diplom_backend.Metric {
 	for i := 0; i < size; i++ {
 		m := diplom_backend.Metric{
 			Time: Timestamp(t),
-			Name: "CPU",
+			//Name: "CPU",
 			// Normally we're below 40% CPU utilization
 			Value: rand.Float64() * 40,
 		}

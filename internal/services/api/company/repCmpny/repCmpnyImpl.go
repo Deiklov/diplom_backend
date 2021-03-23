@@ -72,3 +72,34 @@ func (rep *CompanyRepImpl) DelFavorite(userID string, company models.Company) er
 	}
 	return nil
 }
+func (rep *CompanyRepImpl) SearchCompany(slug string) (models.Company, error) {
+	sql, _, err := rep.goquDb.From("companies").
+		Where(goqu.C("name").Eq(slug)).ToSQL()
+	companies := models.Company{}
+	err = rep.dbsqlx.QueryRowx(sql).StructScan(&companies)
+	if err != nil {
+		logger.Error(err)
+		return models.Company{}, errOwn.ErrDbBadOperation
+	}
+	return companies, nil
+}
+
+func (rep *CompanyRepImpl) GetAllCompanies() ([]models.Company, error) {
+	sql, _, err := rep.goquDb.From("companies").ToSQL()
+	companies := make([]models.Company, 0)
+	rows, err := rep.dbsqlx.Queryx(sql)
+	for rows.Next() {
+		var cmpn models.Company
+
+		err = rows.StructScan(&cmpn)
+		if err != nil {
+			return companies, err
+		}
+		companies = append(companies, cmpn)
+	}
+	if err != nil {
+		logger.Error(err)
+		return []models.Company{}, errOwn.ErrDbBadOperation
+	}
+	return companies, nil
+}

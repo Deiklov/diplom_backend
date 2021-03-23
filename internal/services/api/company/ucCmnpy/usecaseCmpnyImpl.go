@@ -30,3 +30,10 @@ func (uc *CompanyUCImpl) AddFavorite(userID string, company models.Company) erro
 func (uc *CompanyUCImpl) DelFavorite(userID string, company models.Company) error {
 	return uc.rep.DelFavorite(userID, company)
 }
+
+func (uc *CompanyUCImpl) SearchCompany(slug string) (models.Company, error) {
+	return uc.rep.SearchCompany(slug)
+}
+func (uc *CompanyUCImpl) GetAllCompanies() ([]models.Company, error) {
+	return uc.rep.GetAllCompanies()
+}

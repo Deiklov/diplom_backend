@@ -27,6 +27,7 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI) {
 	router.POST("/api/v1/company/favorite", handler.AddFavorite, mwareJWT)
 	router.GET("/api/v1/company/favorite", handler.PersonalCompanyPage)
 	router.GET("/api/v1/company/predict", handler.CompanyPredict, mwareJWT)
+	router.GET("/api/v1/companies/search/:slug", handler.CompanySearch)
 
 }
 func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
@@ -70,7 +71,14 @@ func (usHttp *CompanyHttp) GetFavoriteList(ctx echo.Context) error {
 }
 
 func (usHttp *CompanyHttp) GetAllCompaniesList(ctx echo.Context) error {
-	return ctx.String(200, "all companies list")
+	companiesFromDB, err := usHttp.UseCase.GetAllCompanies()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+	return ctx.JSON(200, companiesFromDB)
+
 }
 
 func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
@@ -80,5 +88,23 @@ func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 
 func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
 	return ctx.String(200, "predict company")
+
+}
+
+//поиск только по slug
+func (usHttp *CompanyHttp) CompanySearch(ctx echo.Context) error {
+	stocksSlug := ctx.Param("slug")
+	if !govalidator.IsBase64(stocksSlug) {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid company slug",
+		})
+	}
+	companyFromDB, err := usHttp.UseCase.SearchCompany(stocksSlug)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+	return ctx.JSON(200, companyFromDB)
 
 }

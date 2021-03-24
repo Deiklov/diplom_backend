@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import grpc
 import numpy as np
-from analyze import StocksAnalyzer
+# from analyze import StocksAnalyzer
 import prediction_pb2 as pb2
 from prediction_pb2_grpc import PredictAPIServicer, add_PredictAPIServicer_to_server
 
@@ -18,7 +18,8 @@ def find_outliers(data: np.ndarray):
 
 class PredictServer(PredictAPIServicer):
     def __init__(self):
-        self.stockAnalyzer = StocksAnalyzer()
+        # self.stockAnalyzer = StocksAnalyzer()
+        pass
 
     def Predict(self, request, context):
         logging.info('detect request size: %s', request.stocks_name)

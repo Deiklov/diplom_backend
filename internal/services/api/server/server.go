@@ -73,7 +73,7 @@ func (serv *Server) Run() {
 	p.Use(router)
 
 	addr := "localhost:9999"
-	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
 		logger.Warn(err)
 	}

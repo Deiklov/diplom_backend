@@ -31,3 +31,11 @@ services:
 #    ports:
 #      - "8080:8080"
 #    network_mode: host
+  prediction:
+    build:
+      context: ./
+      dockerfile: docker/py.Dockerfile
+    depends_on:
+      - pg_db
+    container_name: prediction
+    network_mode: host

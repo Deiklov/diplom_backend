@@ -11,15 +11,13 @@ import (
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/repUser"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/ucUser"
 	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
+	"github.com/Deiklov/diplom_backend/pkg/logger"
+	_ "github.com/jackc/pgx/stdlib"
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
-	pbtime "google.golang.org/protobuf/types/known/timestamppb"
-	"math/rand"
-	"net/http"
-	"time"
-
-	_ "github.com/jackc/pgx/stdlib"
 	"github.com/labstack/echo/v4/middleware"
+	"google.golang.org/grpc"
+	"net/http"
 	"os"
 )
 
@@ -70,17 +68,17 @@ func (serv *Server) Run() {
 		CustomTimeFormat: "2006-01-02 15:04:05",
 	}))
 
-	//if err := sentry.Init(sentry.ClientOptions{
-	//	Dsn: "https://325b0bf7ab154d349f3e51010d1964e7@o553507.ingest.sentry.io/5680876",
-	//}); err != nil {
-	//	logger.Fatal(err)
-	//}
-	//router.Use(sentryecho.New(sentryecho.Options{}))
-	//sentry.CaptureMessage("It works!")
-	//router.Use(middleware.LoggerWithConfig(middleware.DefaultLoggerConfig))
 	router.Use(middleware.Recover())
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(router)
+
+	addr := "localhost:9999"
+	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		logger.Warn(err)
+	}
+	defer conn.Close()
+	client := diplom_backend.NewPredictAPIClient(conn)
 
 	userRepo := repUser.CreateRepository(pdb)
 	userUC := ucUser.CreateUseCase(userRepo)
@@ -89,51 +87,8 @@ func (serv *Server) Run() {
 	cmpnyRepo := repCmpny.CreateRepCmpny(pdb)
 	cmpnyUCase := ucCmnpy.CreateUseCase(cmpnyRepo)
 	//принимает репозиторий, чтобы быстрее шла разработка
-	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase, pdb)
-	//addr := "localhost:9999"
-	//conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
-	//if err != nil {
-	//	logger.Fatal(err)
-	//}
-	//defer conn.Close()
-	//client := diplom_backend.NewOutliersClient(conn)
-	//req := diplom_backend.OutliersRequest{
-	//	Metrics: dummyData(),
-	//}
-	//
-	//resp, err := client.Detect(context.Background(), &req)
-	//logger.Info(resp)
-	//if err != nil {
-	//	logger.Fatal(err)
-	//}
+	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase, pdb, client)
+
 	router.Logger.Fatal(router.Start(":8080"))
 
-}
-func dummyData() []*diplom_backend.Metric {
-	const size = 1000
-	out := make([]*diplom_backend.Metric, size)
-	t := time.Date(2020, 5, 22, 14, 13, 11, 0, time.UTC)
-	for i := 0; i < size; i++ {
-		m := diplom_backend.Metric{
-			Time: Timestamp(t),
-			//Name: "CPU",
-			// Normally we're below 40% CPU utilization
-			Value: rand.Float64() * 40,
-		}
-		out[i] = &m
-		t.Add(time.Second)
-	}
-	// Create some outliers
-	out[7].Value = 97.3
-	out[113].Value = 92.1
-	out[835].Value = 93.2
-	return out
-}
-
-// Timestamp converts time.Time to protobuf *Timestamp
-func Timestamp(t time.Time) *pbtime.Timestamp {
-	return &pbtime.Timestamp{
-		Seconds: t.Unix(),
-		Nanos:   int32(t.Nanosecond()),
-	}
 }

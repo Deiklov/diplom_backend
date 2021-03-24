@@ -5,6 +5,7 @@ import (
 	"github.com/Deiklov/diplom_backend/internal/common"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
+	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
 	"github.com/asaskevich/govalidator"
 	"github.com/dgrijalva/jwt-go"
@@ -12,7 +13,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	pbtime "google.golang.org/protobuf/types/known/timestamppb"
 	"net/http"
+	"time"
 )
 
 type CompanyHttp struct {
@@ -21,14 +24,16 @@ type CompanyHttp struct {
 	goquDb  *goqu.Database
 	dbsqlx  *sqlx.DB
 	common.UserGetter
+	predictCL diplom_backend.PredictAPIClient
 }
 
-func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB) {
+func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, client diplom_backend.PredictAPIClient) {
 	handler := &CompanyHttp{
-		UseCase: useCase,
-		DB:      db,
-		dbsqlx:  sqlx.NewDb(db, "postgres"),
-		goquDb:  goqu.New("postgres", db),
+		UseCase:   useCase,
+		DB:        db,
+		dbsqlx:    sqlx.NewDb(db, "postgres"),
+		goquDb:    goqu.New("postgres", db),
+		predictCL: client,
 	}
 	mwareJWT := middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
 
@@ -149,7 +154,17 @@ func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 }
 
 func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
-	return ctx.String(200, "predict company")
+	query := diplom_backend.PredictionReq{
+		StocksName: "AAPL",
+		EndedTime:  pbtime.New(time.Now().Local().Add(2 * time.Hour)),
+		Step:       2,
+	}
+	resp, err := usHttp.predictCL.Predict(ctx.Request().Context(), &query)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+	return ctx.JSON(http.StatusOK, resp.TimeSeries)
 
 }
 

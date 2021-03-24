@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'Z!github.com/Deiklov/diplom_backend',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x10prediction.proto\x12\x02pb\x1a\x1fgoogle/protobuf/timestamp.proto\"A\n\x06Metric\x12(\n\x04time\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\r\n\x05value\x18\x02 \x01(\x01\"T\n\rPredictionReq\x12\x13\n\x0bstocks_name\x18\x01 \x01(\t\x12.\n\nended_time\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"1\n\x0ePredictionResp\x12\x1f\n\x0btime_series\x18\x01 \x03(\x0b\x32\n.pb.Metric2@\n\nPredictAPI\x12\x32\n\x07Predict\x12\x11.pb.PredictionReq\x1a\x12.pb.PredictionResp\"\x00\x42#Z!github.com/Deiklov/diplom_backendb\x06proto3'
+  serialized_pb=b'\n\x10prediction.proto\x12\x02pb\x1a\x1fgoogle/protobuf/timestamp.proto\"A\n\x06Metric\x12(\n\x04time\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\r\n\x05value\x18\x02 \x01(\x01\"b\n\rPredictionReq\x12\x13\n\x0bstocks_name\x18\x01 \x01(\t\x12.\n\nended_time\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0c\n\x04step\x18\x03 \x01(\x03\"1\n\x0ePredictionResp\x12\x1f\n\x0btime_series\x18\x01 \x03(\x0b\x32\n.pb.Metric2@\n\nPredictAPI\x12\x32\n\x07Predict\x12\x11.pb.PredictionReq\x1a\x12.pb.PredictionResp\"\x00\x42#Z!github.com/Deiklov/diplom_backendb\x06proto3'
   ,
   dependencies=[google_dot_protobuf_dot_timestamp__pb2.DESCRIPTOR,])
 
@@ -88,6 +88,13 @@ _PREDICTIONREQ = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='step', full_name='pb.PredictionReq.step', index=2,
+      number=3, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -101,7 +108,7 @@ _PREDICTIONREQ = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=124,
-  serialized_end=208,
+  serialized_end=222,
 )
 
 
@@ -132,8 +139,8 @@ _PREDICTIONRESP = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=210,
-  serialized_end=259,
+  serialized_start=224,
+  serialized_end=273,
 )
 
 _METRIC.fields_by_name['time'].message_type = google_dot_protobuf_dot_timestamp__pb2._TIMESTAMP
@@ -175,8 +182,8 @@ _PREDICTAPI = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=261,
-  serialized_end=325,
+  serialized_start=275,
+  serialized_end=339,
   methods=[
   _descriptor.MethodDescriptor(
     name='Predict',

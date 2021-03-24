@@ -1,9 +1,11 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
+
 import grpc
 import numpy as np
 from prediction_pb2 import PredictionResp
 from prediction_pb2_grpc import PredictAPIServicer, add_PredictAPIServicer_to_server
+
 
 def find_outliers(data: np.ndarray):
     """Return indices where values more than 2 standard deviations from mean"""
@@ -12,9 +14,11 @@ def find_outliers(data: np.ndarray):
     return out[0]
 
 
-class OutliersServer(PredictAPIServicer):
-    def Detect(self, request, context):
-        logging.info('detect request size: %d', len(request.metrics))
+class PredictServer(PredictAPIServicer):
+    def Predict(self, request, context):
+        logging.info('detect request size: %s', request.stocks_name)
+        logging.info('detect timeseries: %s', request.ended_time)
+        logging.info('detect step: %s', request.step)
         # Convert metrics to numpy array of values only
 
         data = np.fromiter((m.value for m in request.metrics), dtype='float64')
@@ -22,12 +26,12 @@ class OutliersServer(PredictAPIServicer):
         logging.info('found %d outliers', len(indices))
         resp = PredictionResp(indices=indices)
         return resp
+
+
 if __name__ == '__main__':
-    logging.basicConfig(
-    level = logging.INFO,
-    format = '%(asctime)s - %(levelname)s - %(message)s',)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', )
     server = grpc.server(ThreadPoolExecutor())
-    add_PredictAPIServicer_to_server(OutliersServer(), server)
+    add_PredictAPIServicer_to_server(PredictServer(), server)
     port = 9999
     server.add_insecure_port(f'[::]:{port}')
     server.start()

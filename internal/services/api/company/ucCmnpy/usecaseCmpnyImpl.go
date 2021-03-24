@@ -3,6 +3,7 @@ package ucCmnpy
 import (
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
+	"github.com/pkg/errors"
 )
 
 type CompanyUCImpl struct {
@@ -28,11 +29,22 @@ func (uc *CompanyUCImpl) AddFavorite(userID string, company models.Company) erro
 }
 
 func (uc *CompanyUCImpl) DelFavorite(userID string, company models.Company) error {
-	return uc.rep.DelFavorite(userID, company)
+	if company.ID != "" {
+		return uc.rep.DelFavorite(userID, company.ID)
+	} else if company.Name != "" {
+		cmpny, err := uc.rep.GetCompany(company.Name)
+		if err != nil {
+			return errors.Wrap(err, "can't get favorite by name")
+		}
+		return uc.rep.DelFavorite(userID, cmpny.ID)
+
+	} else {
+		return errors.New("company doesn't contain ID or Name")
+	}
 }
 
-func (uc *CompanyUCImpl) SearchCompany(slug string) (models.Company, error) {
-	return uc.rep.SearchCompany(slug)
+func (uc *CompanyUCImpl) GetCompany(slug string) (models.Company, error) {
+	return uc.rep.GetCompany(slug)
 }
 func (uc *CompanyUCImpl) GetAllCompanies() ([]models.Company, error) {
 	return uc.rep.GetAllCompanies()

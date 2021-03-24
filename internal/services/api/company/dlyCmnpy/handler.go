@@ -46,7 +46,9 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 	cmpny := models.Company{}
 	if err := ctx.Bind(&cmpny); err != nil {
 		logger.Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse company data")
+		return ctx.JSON(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
 	}
 	_, err := govalidator.ValidateStruct(cmpny)
 	if err != nil {
@@ -65,7 +67,9 @@ func (usHttp *CompanyHttp) DeleteFavorite(ctx echo.Context) error {
 	name := models.LikeUnlikeCompany{}
 	if err := ctx.Bind(&name); err != nil {
 		logger.Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse company data")
+		return ctx.JSON(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
 	}
 	userID := usHttp.GetUserID(ctx.Get("user").(*jwt.Token))
 	err := usHttp.UseCase.DelFavorite(userID, models.Company{Name: name.Name})
@@ -157,12 +161,12 @@ func (usHttp *CompanyHttp) CompanySearch(ctx echo.Context) error {
 			"error": "invalid company slug",
 		})
 	}
-	companyFromDB, err := usHttp.UseCase.SearchCompany(stocksSlug)
+	companyFromDB, err := usHttp.UseCase.GetCompany(stocksSlug)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
 		})
 	}
-	return ctx.JSON(200, companyFromDB)
+	return ctx.JSON(http.StatusOK, companyFromDB)
 
 }

@@ -62,10 +62,10 @@ func (rep *CompanyRepImpl) AddFavorite(userID string, company models.Company) er
 	return nil
 }
 
-func (rep *CompanyRepImpl) DelFavorite(userID string, company models.Company) error {
+func (rep *CompanyRepImpl) DelFavorite(userID string, companyID string) error {
 	_, err := rep.goquDb.Delete("company_by_users").Where(goqu.Ex{
 		"user_id":    userID,
-		"company_id": company.ID,
+		"company_id": companyID,
 	}).Executor().Exec()
 	if err != nil {
 		logger.Error(err)
@@ -73,7 +73,7 @@ func (rep *CompanyRepImpl) DelFavorite(userID string, company models.Company) er
 	}
 	return nil
 }
-func (rep *CompanyRepImpl) SearchCompany(slug string) (models.Company, error) {
+func (rep *CompanyRepImpl) GetCompany(slug string) (models.Company, error) {
 	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "year", "country").
 		Where(goqu.C("name").Eq(strings.ToUpper(slug))).ToSQL()
 	companies := models.Company{}

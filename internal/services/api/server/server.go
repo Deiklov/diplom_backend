@@ -88,7 +88,8 @@ func (serv *Server) Run() {
 
 	cmpnyRepo := repCmpny.CreateRepCmpny(pdb)
 	cmpnyUCase := ucCmnpy.CreateUseCase(cmpnyRepo)
-	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase) //добавит роуты компании
+	//принимает репозиторий, чтобы быстрее шла разработка
+	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase, pdb)
 	//addr := "localhost:9999"
 	//conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
 	//if err != nil {

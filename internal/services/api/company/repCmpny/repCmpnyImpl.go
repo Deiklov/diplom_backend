@@ -9,6 +9,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"strings"
 )
 
 type CompanyRepImpl struct {
@@ -28,7 +29,7 @@ func CreateRepCmpny(db *sql.DB) company.CompanyRepI {
 func (rep *CompanyRepImpl) CreateCompany(cmpny models.Company) (*models.Company, error) {
 	cmpnyFromDb := models.Company{}
 	ok, err := rep.goquDb.Insert("companies").Cols("id", "name", "year", "description").
-		Vals(goqu.Vals{uuid.New().String(), cmpny.Name, cmpny.Year, cmpny.Description}).
+		Vals(goqu.Vals{uuid.New().String(), strings.ToUpper(cmpny.Name), cmpny.Year, cmpny.Description}).
 		Returning("id", "name", "year", "description").Executor().ScanStruct(&cmpnyFromDb)
 	if err != nil || !ok {
 		logger.Error(err)
@@ -73,8 +74,8 @@ func (rep *CompanyRepImpl) DelFavorite(userID string, company models.Company) er
 	return nil
 }
 func (rep *CompanyRepImpl) SearchCompany(slug string) (models.Company, error) {
-	sql, _, err := rep.goquDb.From("companies").
-		Where(goqu.C("name").Eq(slug)).ToSQL()
+	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "year", "country").
+		Where(goqu.C("name").Eq(strings.ToUpper(slug))).ToSQL()
 	companies := models.Company{}
 	err = rep.dbsqlx.QueryRowx(sql).StructScan(&companies)
 	if err != nil {
@@ -85,7 +86,7 @@ func (rep *CompanyRepImpl) SearchCompany(slug string) (models.Company, error) {
 }
 
 func (rep *CompanyRepImpl) GetAllCompanies() ([]models.Company, error) {
-	sql, _, err := rep.goquDb.From("companies").ToSQL()
+	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "year", "country").ToSQL()
 	companies := make([]models.Company, 0)
 	rows, err := rep.dbsqlx.Queryx(sql)
 	for rows.Next() {

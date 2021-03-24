@@ -1,9 +1,11 @@
+import datetime
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
 import grpc
 import numpy as np
-from prediction_pb2 import PredictionResp
+
+import prediction_pb2 as pb2
 from prediction_pb2_grpc import PredictAPIServicer, add_PredictAPIServicer_to_server
 
 
@@ -19,13 +21,14 @@ class PredictServer(PredictAPIServicer):
         logging.info('detect request size: %s', request.stocks_name)
         logging.info('detect timeseries: %s', request.ended_time)
         logging.info('detect step: %s', request.step)
-        # Convert metrics to numpy array of values only
+        ended_time: datetime.datetime = request.ended_time.ToDatetime()
+        stocks: str = request.stocks_name
+        step: int = request.step
 
-        data = np.fromiter((m.value for m in request.metrics), dtype='float64')
-        indices = find_outliers(data)
-        logging.info('found %d outliers', len(indices))
-        resp = PredictionResp(indices=indices)
-        return resp
+        result = {'time': request.ended_time, 'value': 23.11}
+        resp = pb2.Metric(**result)
+        result2 = [resp, resp]
+        return pb2.PredictionResp(time_series=result2)
 
 
 if __name__ == '__main__':

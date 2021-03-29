@@ -12,6 +12,7 @@ import (
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/ucUser"
 	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
+	"github.com/Finnhub-Stock-API/finnhub-go"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
@@ -80,6 +81,8 @@ func (serv *Server) Run() {
 	defer conn.Close()
 	client := diplom_backend.NewPredictAPIClient(conn)
 
+	finnhubClient := finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi
+
 	userRepo := repUser.CreateRepository(pdb)
 	userUC := ucUser.CreateUseCase(userRepo)
 	httpUser.AddRoutesWithHandler(router, userUC) //добавит юзерские роуты
@@ -87,7 +90,7 @@ func (serv *Server) Run() {
 	cmpnyRepo := repCmpny.CreateRepCmpny(pdb)
 	cmpnyUCase := ucCmnpy.CreateUseCase(cmpnyRepo)
 	//принимает репозиторий, чтобы быстрее шла разработка
-	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase, pdb, client)
+	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase, pdb, client, finnhubClient, "c0ilbh748v6ot9ddgc0g")
 
 	router.Logger.Fatal(router.Start(":8080"))
 

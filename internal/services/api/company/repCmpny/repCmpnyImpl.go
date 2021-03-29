@@ -33,7 +33,7 @@ func (rep *CompanyRepImpl) CreateCompany(cmpny models.Company) (*models.Company,
 		Returning("id", "name", "year", "description").Executor().ScanStruct(&cmpnyFromDb)
 	if err != nil || !ok {
 		logger.Error(err)
-		return nil, errOwn.ErrDbBadOperation
+		return nil, err
 	}
 	return &cmpnyFromDb, nil
 }

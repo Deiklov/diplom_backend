@@ -3,6 +3,7 @@ module github.com/Deiklov/diplom_backend
 go 1.16
 
 require (
+	github.com/Finnhub-Stock-API/finnhub-go v1.2.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/bxcodec/faker/v3 v3.5.0
 	github.com/davecgh/go-spew v1.1.1

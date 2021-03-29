@@ -1,12 +1,15 @@
 package dlyCmnpy
 
 import (
+	"context"
 	"database/sql"
 	"github.com/Deiklov/diplom_backend/internal/common"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
 	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
+	"github.com/Finnhub-Stock-API/finnhub-go"
+	"github.com/antihax/optional"
 	"github.com/asaskevich/govalidator"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/doug-martin/goqu/v9"
@@ -24,16 +27,20 @@ type CompanyHttp struct {
 	goquDb  *goqu.Database
 	dbsqlx  *sqlx.DB
 	common.UserGetter
-	predictCL diplom_backend.PredictAPIClient
+	predictCL     diplom_backend.PredictAPIClient
+	finnhubClient *finnhub.DefaultApiService
+	FNapiKey      string
 }
 
-func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, client diplom_backend.PredictAPIClient) {
+func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, client diplom_backend.PredictAPIClient, fnClient *finnhub.DefaultApiService, apiKey string) {
 	handler := &CompanyHttp{
-		UseCase:   useCase,
-		DB:        db,
-		dbsqlx:    sqlx.NewDb(db, "postgres"),
-		goquDb:    goqu.New("postgres", db),
-		predictCL: client,
+		UseCase:       useCase,
+		DB:            db,
+		dbsqlx:        sqlx.NewDb(db, "postgres"),
+		goquDb:        goqu.New("postgres", db),
+		predictCL:     client,
+		finnhubClient: fnClient,
+		FNapiKey:      apiKey,
 	}
 	mwareJWT := middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
 
@@ -58,8 +65,23 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 	_, err := govalidator.ValidateStruct(cmpny)
 	if err != nil {
 		logger.Error(err)
-		return ctx.String(http.StatusBadRequest, err.Error())
+		return ctx.JSON(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
 	}
+	auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
+		Key: usHttp.FNapiKey,
+	})
+	profile2, _, err := usHttp.finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(cmpny.Name)})
+	if err != nil {
+		logger.Error(err)
+		return ctx.JSON(http.StatusUnprocessableEntity, map[string]string{
+			"error": err.Error(),
+		})
+	}
+	cmpny.Country = profile2.Country
+	cmpny.Year=profile2.Ipo
+
 	cmpnyFromDB, err := usHttp.UseCase.Create(cmpny)
 	if err != nil {
 		logger.Error(err, ctx.Request().Body)

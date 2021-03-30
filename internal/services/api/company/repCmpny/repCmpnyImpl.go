@@ -9,6 +9,8 @@ import (
 	"github.com/Deiklov/diplom_backend/pkg/logger"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx"
 	"github.com/jmoiron/sqlx"
 	"strings"
 )
@@ -63,9 +65,14 @@ func (rep *CompanyRepImpl) AddFavorite(userID string, companyID string) error {
 	_, err := rep.goquDb.Insert("company_by_users").Cols("id", "company_id", "user_id").
 		Vals(goqu.Vals{uuid.New().String(), companyID, userID}).
 		Executor().Exec()
-	if err != nil {
-		logger.Error(err)
-		return errOwn.ErrDbBadOperation
+	switch errVal := err.(type) {
+	case pgx.PgError:
+		//дублироуем добавление в избранное
+		if errVal.Code == pgerrcode.UniqueViolation {
+			return nil
+		}
+	default:
+		return err
 	}
 	return nil
 }

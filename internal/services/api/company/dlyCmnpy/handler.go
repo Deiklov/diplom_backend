@@ -16,7 +16,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/pkg/errors"
 	pbtime "google.golang.org/protobuf/types/known/timestamppb"
 	"net/http"
 	"time"
@@ -60,17 +59,11 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 	//curl --header "Content-Type: application/json" --request POST  --data '{"name":"ADBE"}'  http://localhost:8080/api/v1/company
 	cmpny := models.Company{}
 	if err := ctx.Bind(&cmpny); err != nil {
-		logger.Error(err)
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	_, err := govalidator.ValidateStruct(cmpny)
 	if err != nil {
-		logger.Error(err)
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
 		Key: usHttp.FNapiKey,
@@ -78,23 +71,16 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 	profile2, resp, err := usHttp.finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(cmpny.Name)})
 	//при плохом ответе длина будет 2, берем с запасом
 	if resp == nil || resp.ContentLength != -1 {
-		err = errors.New("Stocks with such ticker doesn't exist")
-		logger.Error(err)
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusUnprocessableEntity,
+			"Stocks with such ticker doesn't exist")
 	}
 	if err != nil {
-		logger.Error(err)
-		return ctx.JSON(http.StatusUnprocessableEntity, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err.Error())
 	}
 	cmpny = usHttp.FinhubProfileToModel(profile2)
 
 	cmpnyFromDB, err := usHttp.UseCase.Create(cmpny)
 	if err != nil {
-		logger.Error(err, ctx.Request().Body)
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, cmpnyFromDB)
@@ -104,17 +90,12 @@ func (usHttp *CompanyHttp) DeleteFavorite(ctx echo.Context) error {
 	like := models.LikeUnlikeCompany{}
 	if err := ctx.Bind(&like); err != nil {
 		logger.Error(err)
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	userID := usHttp.GetUserID(ctx.Get("user").(*jwt.Token))
-	err := usHttp.UseCase.DelFavorite(userID, models.Company{Name: like.Ticker})
+	err := usHttp.UseCase.DelFavorite(userID, models.Company{Ticker: like.Ticker})
 	if err != nil {
-		logger.Error(err)
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.NoContent(http.StatusOK)
 
@@ -123,20 +104,14 @@ func (usHttp *CompanyHttp) DeleteFavorite(ctx echo.Context) error {
 func (usHttp *CompanyHttp) AddFavorite(ctx echo.Context) error {
 	like := models.LikeUnlikeCompany{}
 	if err := ctx.Bind(&like); err != nil {
-		logger.Error(err)
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	userID := usHttp.GetUserID(ctx.Get("user").(*jwt.Token))
 	err := usHttp.UseCase.AddFavorite(userID, models.Company{
 		Ticker: like.Ticker,
 	})
 	if err != nil {
-		logger.Error(err)
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.NoContent(http.StatusOK)
 }
@@ -144,11 +119,9 @@ func (usHttp *CompanyHttp) AddFavorite(ctx echo.Context) error {
 //work
 func (usHttp *CompanyHttp) GetFavoriteList(ctx echo.Context) error {
 	cmpnys := []models.Company{}
-	err := usHttp.dbsqlx.Select(&cmpnys, "SELECT cmp.id, name,year,country from company_by_users  cmpusers join companies cmp on cmp.id=cmpusers.company_id ")
+	err := usHttp.dbsqlx.Select(&cmpnys, "SELECT cmp.id, ticker,name,ipo,country from company_by_users  cmpusers join companies cmp on cmp.id=cmpusers.company_id ")
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, cmpnys)
 
@@ -158,11 +131,9 @@ func (usHttp *CompanyHttp) GetFavoriteList(ctx echo.Context) error {
 func (usHttp *CompanyHttp) GetAllCompaniesList(ctx echo.Context) error {
 	companiesFromDB, err := usHttp.UseCase.GetAllCompanies()
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	return ctx.JSON(200, companiesFromDB)
+	return ctx.JSON(http.StatusOK, companiesFromDB)
 
 }
 
@@ -170,16 +141,12 @@ func (usHttp *CompanyHttp) GetAllCompaniesList(ctx echo.Context) error {
 func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 	stocksSlug := ctx.Param("slug")
 	if !govalidator.IsBase64(stocksSlug) {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": "invalid company slug",
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid company slug!")
 	}
 	var cmpny models.Company
 	err := usHttp.dbsqlx.Get(&cmpny, "SELECT id, name, description, country, attributes, ipo, ticker, logo, weburl from companies where ticker=$1", stocksSlug)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, cmpny)
 
@@ -193,8 +160,7 @@ func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
 	}
 	resp, err := usHttp.predictCL.Predict(ctx.Request().Context(), &query)
 	if err != nil {
-		logger.Error(err)
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, resp.TimeSeries)
 

@@ -14,6 +14,7 @@ require (
 	github.com/golang/protobuf v1.5.1 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/jackc/pgconn v1.8.0
+	github.com/jackc/pgerrcode v0.0.0-20201024163028-a0d42d470451 // indirect
 	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/jackc/pgx/v4 v4.0.0-pre1.0.20190824185557-6972a5742186
 	github.com/jinzhu/gorm v1.9.16

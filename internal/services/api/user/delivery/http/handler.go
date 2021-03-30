@@ -3,7 +3,6 @@ package http
 import (
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user"
-	"github.com/Deiklov/diplom_backend/pkg/logger"
 	"github.com/asaskevich/govalidator"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
@@ -33,13 +32,11 @@ func AddRoutesWithHandler(router *echo.Echo, useCase user.UseCase) {
 func (usHttp *UserHttp) Create(ctx echo.Context) error {
 	usr := models.User{}
 	if err := ctx.Bind(&usr); err != nil {
-		logger.Error(err)
 		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse user data")
 	}
 	_, err := govalidator.ValidateStruct(usr)
 	if err != nil {
-		logger.Error(err)
-		return ctx.String(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	if err := usHttp.UseCase.Create(&models.User{
 		ID:       uuid.NewString(),
@@ -47,7 +44,6 @@ func (usHttp *UserHttp) Create(ctx echo.Context) error {
 		Email:    usr.Email,
 		Password: usr.Password,
 	}); err != nil {
-		logger.Error(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	token, err := usHttp.login(&models.AuthData{
@@ -55,9 +51,7 @@ func (usHttp *UserHttp) Create(ctx echo.Context) error {
 		Password: usr.Password,
 	})
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, map[string]string{
 		"token": token,
@@ -90,7 +84,7 @@ func (usHttp *UserHttp) Get(ctx echo.Context) error {
 	userClaims := claims["user"].(map[string]interface{})
 	userData, err := usHttp.parseUser(userClaims)
 	if err != nil {
-		return ctx.String(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	return ctx.JSON(http.StatusOK, userData)
@@ -104,18 +98,15 @@ func (usHttp *UserHttp) GetAll(ctx echo.Context) error {
 func (usHttp *UserHttp) Update(ctx echo.Context) error {
 	usr := models.User{}
 	if err := ctx.Bind(&usr); err != nil {
-		logger.Error(err)
 		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse user data")
 	}
 	_, err := govalidator.ValidateStruct(usr)
 	if err != nil {
-		logger.Error(err)
-		return ctx.String(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	userFromDB, err := usHttp.UseCase.Update(&usr)
 	if err != nil {
-		logger.Error(err)
-		return ctx.String(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, userFromDB)
 }
@@ -132,14 +123,11 @@ func (usHttp *UserHttp) Login(ctx echo.Context) error {
 	}
 	_, err := govalidator.ValidateStruct(authData)
 	if err != nil {
-		logger.Error(err)
-		return ctx.String(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	token, err := usHttp.login(authData)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return ctx.JSON(http.StatusOK, map[string]string{
 		"token": token,

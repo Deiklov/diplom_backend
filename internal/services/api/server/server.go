@@ -70,6 +70,45 @@ func (serv *Server) Run() {
 	}))
 
 	router.Use(middleware.Recover())
+
+	router.HTTPErrorHandler = func(err error, c echo.Context) {
+		he, ok := err.(*echo.HTTPError)
+		if ok {
+			if he.Internal != nil {
+				if herr, ok := he.Internal.(*echo.HTTPError); ok {
+					he = herr
+				}
+			}
+		} else {
+			he = &echo.HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: http.StatusText(http.StatusInternalServerError),
+			}
+		}
+
+		// Issue #1426
+		code := he.Code
+		message := he.Message
+		if router.Debug {
+			message = err.Error()
+		} else if m, ok := message.(string); ok {
+			message = echo.Map{"error": m}
+		}
+
+		// Send response
+		if !c.Response().Committed {
+			logger.Error(err)
+			if c.Request().Method == http.MethodHead { // Issue #608
+				err = c.NoContent(he.Code)
+			} else {
+				err = c.JSON(code, message)
+			}
+			if err != nil {
+				router.Logger.Error(err)
+			}
+		}
+	}
+
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(router)
 

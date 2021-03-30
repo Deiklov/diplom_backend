@@ -16,6 +16,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pkg/errors"
 	pbtime "google.golang.org/protobuf/types/known/timestamppb"
 	"net/http"
 	"time"
@@ -30,6 +31,7 @@ type CompanyHttp struct {
 	predictCL     diplom_backend.PredictAPIClient
 	finnhubClient *finnhub.DefaultApiService
 	FNapiKey      string
+	common.CmpnyHelper
 }
 
 func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, client diplom_backend.PredictAPIClient, fnClient *finnhub.DefaultApiService, apiKey string) {
@@ -55,6 +57,7 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql
 
 }
 func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
+	//curl --header "Content-Type: application/json" --request POST  --data '{"name":"ADBE"}'  http://localhost:8080/api/v1/company
 	cmpny := models.Company{}
 	if err := ctx.Bind(&cmpny); err != nil {
 		logger.Error(err)
@@ -72,15 +75,22 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 	auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
 		Key: usHttp.FNapiKey,
 	})
-	profile2, _, err := usHttp.finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(cmpny.Name)})
+	profile2, resp, err := usHttp.finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(cmpny.Name)})
+	//при плохом ответе длина будет 2, берем с запасом
+	if resp == nil || resp.ContentLength != -1 {
+		err = errors.New("Stocks with such ticker doesn't exist")
+		logger.Error(err)
+		return ctx.JSON(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+	}
 	if err != nil {
 		logger.Error(err)
 		return ctx.JSON(http.StatusUnprocessableEntity, map[string]string{
 			"error": err.Error(),
 		})
 	}
-	cmpny.Country = profile2.Country
-	cmpny.Year=profile2.Ipo
+	cmpny = usHttp.FinhubProfileToModel(profile2)
 
 	cmpnyFromDB, err := usHttp.UseCase.Create(cmpny)
 	if err != nil {
@@ -165,7 +175,7 @@ func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 		})
 	}
 	var cmpny models.Company
-	err := usHttp.dbsqlx.Get(&cmpny, "SELECT id,name,year,description,country from companies where name=$1", stocksSlug)
+	err := usHttp.dbsqlx.Get(&cmpny, "SELECT id, name, description, country, attributes, ipo, ticker, logo, weburl from companies where ticker=$1", stocksSlug)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),

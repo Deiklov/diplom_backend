@@ -2,6 +2,7 @@ package repCmpny
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
 	errOwn "github.com/Deiklov/diplom_backend/pkg/errors"
@@ -28,9 +29,16 @@ func CreateRepCmpny(db *sql.DB) company.CompanyRepI {
 
 func (rep *CompanyRepImpl) CreateCompany(cmpny models.Company) (*models.Company, error) {
 	cmpnyFromDb := models.Company{}
-	ok, err := rep.goquDb.Insert("companies").Cols("id", "name", "year", "description").
-		Vals(goqu.Vals{uuid.New().String(), strings.ToUpper(cmpny.Name), cmpny.Year, cmpny.Description}).
-		Returning("id", "name", "year", "description").Executor().ScanStruct(&cmpnyFromDb)
+	attributes, err := json.Marshal(cmpny.Attributes)
+	if err != nil {
+		return nil, err
+	}
+	ok, err := rep.goquDb.Insert("companies").
+		Cols("id", "name", "description", "country", "attributes", "ipo", "ticker", "logo", "weburl").
+		Vals(goqu.Vals{uuid.New().String(), strings.ToUpper(cmpny.Name),
+			cmpny.Description, cmpny.Country, attributes, cmpny.IPO,
+			cmpny.Ticker, cmpny.Logo, cmpny.Weburl}).
+		Returning("id", "ticker", "ipo", "name", "country").Executor().ScanStruct(&cmpnyFromDb)
 	if err != nil || !ok {
 		logger.Error(err)
 		return nil, err
@@ -69,24 +77,24 @@ func (rep *CompanyRepImpl) DelFavorite(userID string, companyID string) error {
 	}).Executor().Exec()
 	if err != nil {
 		logger.Error(err)
-		return errOwn.ErrDbBadOperation
+		return err
 	}
 	return nil
 }
 func (rep *CompanyRepImpl) GetCompany(slug string) (models.Company, error) {
-	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "year", "country").
-		Where(goqu.C("name").Eq(strings.ToUpper(slug))).ToSQL()
+	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "ipo", "country", "ticker").
+		Where(goqu.C("ticker").Eq(strings.ToUpper(slug))).ToSQL()
 	companies := models.Company{}
 	err = rep.dbsqlx.QueryRowx(sql).StructScan(&companies)
 	if err != nil {
 		logger.Error(err)
-		return models.Company{}, errOwn.ErrDbBadOperation
+		return models.Company{}, err
 	}
 	return companies, nil
 }
 
 func (rep *CompanyRepImpl) GetAllCompanies() ([]models.Company, error) {
-	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "year", "country").ToSQL()
+	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "ipo", "country", "ticker").ToSQL()
 	companies := make([]models.Company, 0)
 	rows, err := rep.dbsqlx.Queryx(sql)
 	for rows.Next() {
@@ -100,7 +108,7 @@ func (rep *CompanyRepImpl) GetAllCompanies() ([]models.Company, error) {
 	}
 	if err != nil {
 		logger.Error(err)
-		return []models.Company{}, errOwn.ErrDbBadOperation
+		return []models.Company{}, err
 	}
 	return companies, nil
 }

@@ -1,30 +1,50 @@
 package models
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"github.com/pkg/errors"
+	"time"
+)
+
 type (
 	Company struct {
-		ID          string `json:"id"`
-		Name        string `json:"name" valid:"required,ascii"`
-		Year        uint32 `json:"founded_at" valid:"optional,int"`
-		Description string `json:"description" valid:"optional,ascii"`
-		Country     string `json:"country" valid:"optional,ascii"`
-		// Currency used in company filings.
-		Currency string `json:"currency,omitempty"`
-		// Listed exchange.
-		Exchange string `json:"exchange,omitempty"`
-		// Company name.
-		// Company symbol/ticker as used on the listed exchange.
-		Ticker string `json:"ticker,omitempty"`
-		// IPO date.
-		Ipo string `json:"ipo,omitempty"`
-		// Market Capitalization.
-		// Logo image.
-		Logo string `json:"logo,omitempty"`
-		// Company website.
-		Weburl string `json:"weburl,omitempty"`
-		// Finnhub industry classification.
-		Industry string `json:"finnhubIndustry,omitempty"`
+		ID          string          `json:"id"`
+		Name        string          `json:"name" valid:"required,ascii"`
+		IPO         time.Time       `json:"ipo" valid:"optional,int" db:"ipo"`
+		Description string          `json:"description" valid:"optional,ascii"`
+		Country     string          `json:"country" valid:"optional,ascii"`
+		Ticker      string          `json:"ticker,omitempty"`
+		Logo        string          `json:"logo,omitempty"`
+		Weburl      string          `json:"weburl,omitempty"`
+		Attributes  AttributesCmpny `json:"attributes,omitempty"`
 	}
 	LikeUnlikeCompany struct {
 		Name string `json:"name" valid:"required,ascii"`
 	}
+	AttributesCmpny struct {
+		Currency string `json:"currency,omitempty"`
+		Exchange string `json:"exchange,omitempty"`
+		Industry string `json:"finnhubIndustry,omitempty"`
+	}
 )
+//для json scan
+func (pc *AttributesCmpny) Scan(val interface{}) error {
+	switch v := val.(type) {
+	case []byte:
+		_ = json.Unmarshal(v, &pc)
+		return nil
+	case string:
+		_ = json.Unmarshal([]byte(v), &pc)
+		return nil
+	case nil:
+		pc = &AttributesCmpny{}
+		return nil
+	default:
+		return errors.New(fmt.Sprintf("Unsupported type: %T", v))
+	}
+}
+func (pc *AttributesCmpny) Value() (driver.Value, error) {
+	return json.Marshal(pc)
+}

@@ -101,15 +101,15 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 }
 
 func (usHttp *CompanyHttp) DeleteFavorite(ctx echo.Context) error {
-	name := models.LikeUnlikeCompany{}
-	if err := ctx.Bind(&name); err != nil {
+	like := models.LikeUnlikeCompany{}
+	if err := ctx.Bind(&like); err != nil {
 		logger.Error(err)
 		return ctx.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
 	}
 	userID := usHttp.GetUserID(ctx.Get("user").(*jwt.Token))
-	err := usHttp.UseCase.DelFavorite(userID, models.Company{Name: name.Name})
+	err := usHttp.UseCase.DelFavorite(userID, models.Company{Name: like.Ticker})
 	if err != nil {
 		logger.Error(err)
 		return ctx.JSON(http.StatusBadRequest, map[string]string{
@@ -121,8 +121,8 @@ func (usHttp *CompanyHttp) DeleteFavorite(ctx echo.Context) error {
 }
 
 func (usHttp *CompanyHttp) AddFavorite(ctx echo.Context) error {
-	name := models.LikeUnlikeCompany{}
-	if err := ctx.Bind(&name); err != nil {
+	like := models.LikeUnlikeCompany{}
+	if err := ctx.Bind(&like); err != nil {
 		logger.Error(err)
 		return ctx.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
@@ -130,7 +130,7 @@ func (usHttp *CompanyHttp) AddFavorite(ctx echo.Context) error {
 	}
 	userID := usHttp.GetUserID(ctx.Get("user").(*jwt.Token))
 	err := usHttp.UseCase.AddFavorite(userID, models.Company{
-		Name: name.Name,
+		Ticker: like.Ticker,
 	})
 	if err != nil {
 		logger.Error(err)

@@ -80,3 +80,60 @@ name опциональное
 }
 ```
 2. 400 unauthorized или юзера не существует  
+## 3. Компании
+### 3.1 Создать компанию
+
+Запрос: `/api/v1/company` типа `POST`
+
+Авторизация: не обязательна    
+Ответ:
+1.  200 ok  
+```json
+{
+   "id":"1532bbee-8d4c-492d-a577-bae3817fa113",
+   "name":"NVIDIA ORD",
+   "ipo":"1999-01-22T00:00:00Z",
+   "description":"",
+   "country":"US",
+   "ticker":"NVDA",
+   "attributes":{}
+}
+```
+2.  400 Невалидный или не существующий ticker акции
+3.  422 проблемы с либой finnhub
+### 3.2 Получить полную инфу о компании
+
+Запрос: `/api/v1/company/page/:slug` типа `GET`
+Авторизация: не обязательна  
+Ответ:
+1. 200 ok
+```json
+{
+   "id":"2889bafb-318f-42b5-aa6d-0ca1c4e9f5e2",
+   "name":"NIKOLA ORD",
+   "ipo":"2018-05-15T00:00:00Z",
+   "description":"Perferendis voluptatem consequatur aut sit accusantium.",
+   "country":"US",
+   "ticker":"NKLA",
+   "logo":"https://finnhub.io/api/logo?symbol=NKLA",
+   "weburl":"https://nikolamotor.com/",
+   "attributes":{
+      "currency":"USD",
+      "exchange":"NASDAQ NMS - GLOBAL MARKET",
+      "finnhubIndustry":"Machinery"
+   }
+}
+```
+2. 400 ошибка в базе  
+### 3.3 Добавить в избранное
+
+Запрос: `/api/v1/company/favorite` типа `POST`
+Авторизация: обязательна  
+Тело:
+1. 200 ok
+```json
+{
+   "ticker":"AAPL"
+}
+```
+2. 400 ошибка в базе

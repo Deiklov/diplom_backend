@@ -25,16 +25,27 @@ func (uc *CompanyUCImpl) GetFavoriteList(userID string, company models.Company) 
 }
 
 func (uc *CompanyUCImpl) AddFavorite(userID string, company models.Company) error {
-	return uc.rep.AddFavorite(userID, company)
+	if company.ID != "" {
+		return uc.rep.AddFavorite(userID, company.ID)
+	} else if company.Ticker != "" {
+		cmpny, err := uc.rep.GetCompany(company.Ticker)
+		if err != nil {
+			return errors.Wrap(err, "can't get favorite by ticker")
+		}
+		return uc.rep.AddFavorite(userID, cmpny.ID)
+
+	} else {
+		return errors.New("company doesn't contain ID or Name")
+	}
 }
 
 func (uc *CompanyUCImpl) DelFavorite(userID string, company models.Company) error {
 	if company.ID != "" {
 		return uc.rep.DelFavorite(userID, company.ID)
-	} else if company.Name != "" {
-		cmpny, err := uc.rep.GetCompany(company.Name)
+	} else if company.Ticker != "" {
+		cmpny, err := uc.rep.GetCompany(company.Ticker)
 		if err != nil {
-			return errors.Wrap(err, "can't get favorite by name")
+			return errors.Wrap(err, "can't get favorite by ticker")
 		}
 		return uc.rep.DelFavorite(userID, cmpny.ID)
 

@@ -59,9 +59,9 @@ func (rep *CompanyRepImpl) GetFavoriteList(userID string, company models.Company
 	return companies, nil
 }
 
-func (rep *CompanyRepImpl) AddFavorite(userID string, company models.Company) error {
+func (rep *CompanyRepImpl) AddFavorite(userID string, companyID string) error {
 	_, err := rep.goquDb.Insert("company_by_users").Cols("id", "company_id", "user_id").
-		Vals(goqu.Vals{uuid.New().String(), company.ID, userID}).
+		Vals(goqu.Vals{uuid.New().String(), companyID, userID}).
 		Executor().Exec()
 	if err != nil {
 		logger.Error(err)

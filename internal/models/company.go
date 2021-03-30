@@ -21,7 +21,7 @@ type (
 		Attributes  AttributesCmpny `json:"attributes,omitempty"`
 	}
 	LikeUnlikeCompany struct {
-		Name string `json:"name" valid:"required,ascii"`
+		Ticker string `json:"ticker" valid:"required,ascii"`
 	}
 	AttributesCmpny struct {
 		Currency string `json:"currency,omitempty"`

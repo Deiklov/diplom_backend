@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pkg/errors"
 	"net/http"
 	"time"
 )
@@ -32,11 +33,11 @@ func AddRoutesWithHandler(router *echo.Echo, useCase user.UseCase) {
 func (usHttp *UserHttp) Create(ctx echo.Context) error {
 	usr := models.User{}
 	if err := ctx.Bind(&usr); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse user data")
+		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "Can't parse user data").Error())
 	}
 	_, err := govalidator.ValidateStruct(usr)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "Invalid register data").Error())
 	}
 	if err := usHttp.UseCase.Create(&models.User{
 		ID:       uuid.NewString(),
@@ -123,7 +124,8 @@ func (usHttp *UserHttp) Login(ctx echo.Context) error {
 	}
 	_, err := govalidator.ValidateStruct(authData)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "Invalid login data").Error())
+
 	}
 	token, err := usHttp.login(authData)
 	if err != nil {

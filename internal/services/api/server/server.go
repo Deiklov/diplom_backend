@@ -13,6 +13,8 @@ import (
 	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
 	"github.com/Finnhub-Stock-API/finnhub-go"
+	"github.com/getsentry/sentry-go"
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
@@ -71,6 +73,13 @@ func (serv *Server) Run() {
 
 	router.Use(middleware.Recover())
 
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn: "https://325b0bf7ab154d349f3e51010d1964e7@o553507.ingest.sentry.io/5680876",
+	}); err != nil {
+		fmt.Printf("Sentry initialization failed: %v\n", err)
+	}
+	router.Use(sentryecho.New(sentryecho.Options{}))
+
 	router.HTTPErrorHandler = func(err error, c echo.Context) {
 		he, ok := err.(*echo.HTTPError)
 		if ok {
@@ -97,7 +106,12 @@ func (serv *Server) Run() {
 
 		// Send response
 		if !c.Response().Committed {
+			//логируем в консоль и в сентри
 			logger.Error(err)
+			if hub := sentryecho.GetHubFromContext(c); hub != nil {
+				//используем message тк call stack будет в ошибке и меньше длина логов
+				hub.CaptureMessage(err.Error())
+			}
 			if c.Request().Method == http.MethodHead { // Issue #608
 				err = c.NoContent(he.Code)
 			} else {

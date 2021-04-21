@@ -28,7 +28,23 @@ type (
 		Exchange string `json:"exchange,omitempty"`
 		Industry string `json:"finnhubIndustry,omitempty"`
 	}
+	CompanyByTicker struct {
+		SrackingId string `json:"trackingId"`
+		Status     string `json:"status"`
+		Payload    struct {
+			Total       int `json:"total"`
+			Instruments []struct {
+				Figi     string `json:"figi"`
+				Ticker   string `json:"ticker"`
+				Isin     string `json:"isin"`
+				Currency string `json:"currency"`
+				Name     string `json:"name"`
+				Type     string `json:"type"`
+			} `json:"instruments"`
+		} `json:"payload"`
+	}
 )
+
 //для json scan
 func (pc *AttributesCmpny) Scan(val interface{}) error {
 	switch v := val.(type) {

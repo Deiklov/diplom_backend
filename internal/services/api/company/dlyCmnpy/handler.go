@@ -3,6 +3,7 @@ package dlyCmnpy
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"github.com/Deiklov/diplom_backend/internal/common"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
@@ -17,7 +18,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	pbtime "google.golang.org/protobuf/types/known/timestamppb"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"path"
 	"time"
 )
 
@@ -31,6 +35,8 @@ type CompanyHttp struct {
 	finnhubClient *finnhub.DefaultApiService
 	FNapiKey      string
 	common.CmpnyHelper
+	tinkoffAPIURL string
+	tinkoffToken  string
 }
 
 func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, client diplom_backend.PredictAPIClient, fnClient *finnhub.DefaultApiService, apiKey string) {
@@ -42,6 +48,8 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql
 		predictCL:     client,
 		finnhubClient: fnClient,
 		FNapiKey:      apiKey,
+		tinkoffAPIURL: "https://api-invest.tinkoff.ru/openapi/sandbox",
+		tinkoffToken:  "t.UE-TeGMgnVeOVaoBYl7uk33-QtM9k2KwZTc7VyI1ubJErMxsVQvmYb92eRa157bm6XPjx74NGDIYfxSecNrdEQ",
 	}
 	mwareJWT := middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
 
@@ -53,6 +61,7 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql
 	router.GET("/api/v1/company/page/:slug", handler.PersonalCompanyPage)
 	router.GET("/api/v1/company/predict", handler.CompanyPredict, mwareJWT)
 	router.GET("/api/v1/companies/search/:slug", handler.CompanySearch)
+	router.GET("/api/v1/market/candles", handler.GetCandles)
 
 }
 func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
@@ -182,4 +191,46 @@ func (usHttp *CompanyHttp) CompanySearch(ctx echo.Context) error {
 	}
 	return ctx.JSON(http.StatusOK, companyFromDB)
 
+}
+
+func (usHttp *CompanyHttp) GetCandles(ctx echo.Context) error {
+	ticker := ctx.QueryParam("ticker")
+	//from := ctx.QueryParam("from")
+	//to := ctx.QueryParam("to")
+	//interval := ctx.QueryParam("interval")
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	url, err := url.Parse(usHttp.tinkoffAPIURL)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+
+	}
+	url.Path = path.Join(url.Path, "/market/search/by-ticker")
+	q := url.Query()
+	q.Set("ticker", ticker)
+	url.RawQuery = q.Encode()
+
+	req, err := http.NewRequest(http.MethodGet, url.String(), nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	req.Header.Add("Authorization", "Bearer "+usHttp.tinkoffToken)
+	resp, err := client.Do(req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	var cmpnyByTicker models.CompanyByTicker
+	if err := json.Unmarshal(body, &cmpnyByTicker); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]string{"figi": cmpnyByTicker.Payload.Instruments[0].Ticker})
 }

@@ -3,13 +3,13 @@ package dlyCmnpy
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"github.com/Deiklov/diplom_backend/internal/common"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
 	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
 	"github.com/Finnhub-Stock-API/finnhub-go"
+	sdk "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	"github.com/antihax/optional"
 	"github.com/asaskevich/govalidator"
 	"github.com/dgrijalva/jwt-go"
@@ -18,7 +18,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	pbtime "google.golang.org/protobuf/types/known/timestamppb"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -195,42 +194,38 @@ func (usHttp *CompanyHttp) CompanySearch(ctx echo.Context) error {
 
 func (usHttp *CompanyHttp) GetCandles(ctx echo.Context) error {
 	ticker := ctx.QueryParam("ticker")
-	//from := ctx.QueryParam("from")
-	//to := ctx.QueryParam("to")
-	//interval := ctx.QueryParam("interval")
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
-	url, err := url.Parse(usHttp.tinkoffAPIURL)
+
+	sdkClient := sdk.NewSandboxRestClient(usHttp.tinkoffToken)
+	instruments, err := sdkClient.InstrumentByTicker(context.Background(), ticker)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 
 	}
-	url.Path = path.Join(url.Path, "/market/search/by-ticker")
-	q := url.Query()
-	q.Set("ticker", ticker)
-	url.RawQuery = q.Encode()
+	//url.Path = path.Join(url.Path, "/market/search/by-ticker")
+	//q := url.Query()
+	//q.Set("ticker", ticker)
+	//url.RawQuery = q.Encode()
 
-	req, err := http.NewRequest(http.MethodGet, url.String(), nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
+	//req, err := http.NewRequest(http.MethodGet, url.String(), nil)
+	//if err != nil {
+	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	//}
+	//
+	//req.Header.Add("Authorization", "Bearer "+usHttp.tinkoffToken)
+	//resp, err := client.Do(req)
+	//if err != nil {
+	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	//}
+	//defer resp.Body.Close()
+	//body, err := ioutil.ReadAll(resp.Body)
+	//if err != nil {
+	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	//}
+	//var cmpnyByTicker models.CompanyByTicker
+	//if err := json.Unmarshal(body, &cmpnyByTicker); err != nil {
+	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	//
+	//}
 
-	req.Header.Add("Authorization", "Bearer "+usHttp.tinkoffToken)
-	resp, err := client.Do(req)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	var cmpnyByTicker models.CompanyByTicker
-	if err := json.Unmarshal(body, &cmpnyByTicker); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-
-	}
-
-	return ctx.JSON(http.StatusOK, map[string]string{"figi": cmpnyByTicker.Payload.Instruments[0].Ticker})
+	return ctx.JSON(http.StatusOK, map[string]string{"figi": instruments[0].Ticker})
 }

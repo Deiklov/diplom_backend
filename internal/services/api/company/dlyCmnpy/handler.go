@@ -148,7 +148,7 @@ func (usHttp *CompanyHttp) GetAllCompaniesList(ctx echo.Context) error {
 //добавляется description и в будущем атрибуты при возврате инфы
 func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 	stocksSlug := ctx.Param("slug")
-	if !govalidator.IsBase64(stocksSlug) {
+		if !govalidator.IsAlphanumeric(stocksSlug) {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid company slug!")
 	}
 	var cmpny models.Company
@@ -177,7 +177,7 @@ func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
 //поиск только по slug
 func (usHttp *CompanyHttp) CompanySearch(ctx echo.Context) error {
 	stocksSlug := ctx.Param("slug")
-	if !govalidator.IsBase64(stocksSlug) {
+	if !govalidator.IsAlphanumeric(stocksSlug) {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{
 			"error": "invalid company slug",
 		})
@@ -193,6 +193,7 @@ func (usHttp *CompanyHttp) CompanySearch(ctx echo.Context) error {
 }
 
 func (usHttp *CompanyHttp) GetCandles(ctx echo.Context) error {
+	//todo добавить логику ограничений, по датам определяем минимальный интервал
 	hub := sentryecho.GetHubFromContext(ctx)
 	if hub == nil {
 		logger.Info("nil sentry hub")

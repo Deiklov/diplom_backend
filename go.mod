@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Finnhub-Stock-API/finnhub-go v1.2.1
-	github.com/TinkoffCreditSystems/invest-openapi-go-sdk v0.6.1 // indirect
+	github.com/TinkoffCreditSystems/invest-openapi-go-sdk v0.6.1
 	github.com/antihax/optional v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/bxcodec/faker/v3 v3.5.0

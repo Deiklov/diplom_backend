@@ -14,13 +14,13 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/doug-martin/goqu/v9"
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pkg/errors"
 	pbtime "google.golang.org/protobuf/types/known/timestamppb"
 	"net/http"
-	"net/url"
-	"path"
 	"time"
 )
 
@@ -193,39 +193,45 @@ func (usHttp *CompanyHttp) CompanySearch(ctx echo.Context) error {
 }
 
 func (usHttp *CompanyHttp) GetCandles(ctx echo.Context) error {
+	hub := sentryecho.GetHubFromContext(ctx)
+	if hub == nil {
+		logger.Info("nil sentry hub")
+	}
 	ticker := ctx.QueryParam("ticker")
-
+	from := ctx.QueryParam("from")
+	to := ctx.QueryParam("to")
+	interval := ctx.QueryParam("interval")
+	if interval == "" {
+		interval = string(sdk.CandleInterval1Day)
+	}
+	fromTime, err := time.Parse(time.RFC3339, from)
+	if err != nil {
+		logger.Info(err)
+		hub.CaptureMessage(err.Error())
+		fromTime = time.Now().AddDate(-1, 0, 0)
+	}
+	toTime, err := time.Parse(time.RFC3339, to)
+	if err != nil {
+		logger.Info(err)
+		hub.CaptureMessage(err.Error())
+		toTime = time.Now()
+	}
 	sdkClient := sdk.NewSandboxRestClient(usHttp.tinkoffToken)
 	instruments, err := sdkClient.InstrumentByTicker(context.Background(), ticker)
-	if err != nil {
+	if err != nil || len(instruments) == 0 {
+		if len(instruments) == 0 {
+			err = errors.New("Zero length of instruments array")
+		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-
 	}
-	//url.Path = path.Join(url.Path, "/market/search/by-ticker")
-	//q := url.Query()
-	//q.Set("ticker", ticker)
-	//url.RawQuery = q.Encode()
 
-	//req, err := http.NewRequest(http.MethodGet, url.String(), nil)
-	//if err != nil {
-	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	//}
-	//
-	//req.Header.Add("Authorization", "Bearer "+usHttp.tinkoffToken)
-	//resp, err := client.Do(req)
-	//if err != nil {
-	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	//}
-	//defer resp.Body.Close()
-	//body, err := ioutil.ReadAll(resp.Body)
-	//if err != nil {
-	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	//}
-	//var cmpnyByTicker models.CompanyByTicker
-	//if err := json.Unmarshal(body, &cmpnyByTicker); err != nil {
-	//	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	//
-	//}
+	candles, err := sdkClient.Candles(context.Background(), fromTime, toTime, sdk.CandleInterval(interval), instruments[0].FIGI)
+	if err != nil || len(candles) == 0 {
+		if len(candles) == 0 {
+			err = errors.New("Zero length of candles array")
+		}
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
 
-	return ctx.JSON(http.StatusOK, map[string]string{"figi": instruments[0].Ticker})
+	return ctx.JSON(http.StatusOK, candles)
 }

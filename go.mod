@@ -14,6 +14,7 @@ require (
 	github.com/getsentry/sentry-go v0.10.0
 	github.com/golang/protobuf v1.5.1 // indirect
 	github.com/google/uuid v1.2.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/jackc/pgconn v1.8.0
 	github.com/jackc/pgerrcode v0.0.0-20201024163028-a0d42d470451
 	github.com/jackc/pgx v3.6.2+incompatible

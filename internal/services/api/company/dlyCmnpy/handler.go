@@ -3,6 +3,7 @@ package dlyCmnpy
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/Deiklov/diplom_backend/internal/common"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
@@ -15,11 +16,13 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/doug-martin/goqu/v9"
 	sentryecho "github.com/getsentry/sentry-go/echo"
+	"github.com/gorilla/websocket"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 	pbtime "google.golang.org/protobuf/types/known/timestamppb"
+	"math/rand"
 	"net/http"
 	"time"
 )
@@ -36,6 +39,8 @@ type CompanyHttp struct {
 	common.CmpnyHelper
 	tinkoffAPIURL string
 	tinkoffToken  string
+	tinkoffAPIWS  string
+	sdkClient     *sdk.SandboxRestClient
 }
 
 func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, client diplom_backend.PredictAPIClient, fnClient *finnhub.DefaultApiService, apiKey string) {
@@ -49,6 +54,8 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql
 		FNapiKey:      apiKey,
 		tinkoffAPIURL: "https://api-invest.tinkoff.ru/openapi/sandbox",
 		tinkoffToken:  "t.UE-TeGMgnVeOVaoBYl7uk33-QtM9k2KwZTc7VyI1ubJErMxsVQvmYb92eRa157bm6XPjx74NGDIYfxSecNrdEQ",
+		tinkoffAPIWS:  "wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws",
+		sdkClient:     sdk.NewSandboxRestClient("t.UE-TeGMgnVeOVaoBYl7uk33-QtM9k2KwZTc7VyI1ubJErMxsVQvmYb92eRa157bm6XPjx74NGDIYfxSecNrdEQ"),
 	}
 	mwareJWT := middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
 
@@ -61,6 +68,7 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql
 	router.GET("/api/v1/company/predict", handler.CompanyPredict, mwareJWT)
 	router.GET("/api/v1/companies/search/:slug", handler.CompanySearch)
 	router.GET("/api/v1/market/candles", handler.GetCandles)
+	router.GET("/api/v1/ws/market/candles/:slug", handler.GetRealTimeData)
 
 }
 func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
@@ -148,7 +156,7 @@ func (usHttp *CompanyHttp) GetAllCompaniesList(ctx echo.Context) error {
 //добавляется description и в будущем атрибуты при возврате инфы
 func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 	stocksSlug := ctx.Param("slug")
-		if !govalidator.IsAlphanumeric(stocksSlug) {
+	if !govalidator.IsAlphanumeric(stocksSlug) {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid company slug!")
 	}
 	var cmpny models.Company
@@ -217,8 +225,8 @@ func (usHttp *CompanyHttp) GetCandles(ctx echo.Context) error {
 		hub.CaptureMessage(err.Error())
 		toTime = time.Now()
 	}
-	sdkClient := sdk.NewSandboxRestClient(usHttp.tinkoffToken)
-	instruments, err := sdkClient.InstrumentByTicker(context.Background(), ticker)
+
+	instruments, err := usHttp.sdkClient.InstrumentByTicker(context.Background(), ticker)
 	if err != nil || len(instruments) == 0 {
 		if len(instruments) == 0 {
 			err = errors.New("Zero length of instruments array")
@@ -226,7 +234,7 @@ func (usHttp *CompanyHttp) GetCandles(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	candles, err := sdkClient.Candles(context.Background(), fromTime, toTime, sdk.CandleInterval(interval), instruments[0].FIGI)
+	candles, err := usHttp.sdkClient.Candles(context.Background(), fromTime, toTime, sdk.CandleInterval(interval), instruments[0].FIGI)
 	if err != nil || len(candles) == 0 {
 		if len(candles) == 0 {
 			err = errors.New("Zero length of candles array")
@@ -235,4 +243,66 @@ func (usHttp *CompanyHttp) GetCandles(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, candles)
+}
+func (usHttp *CompanyHttp) GetRealTimeData(ctx echo.Context) error {
+	ticker := ctx.Param("slug")
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+	ws, err := upgrader.Upgrade(ctx.Response(), ctx.Request(), nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	defer func() { _ = ws.Close() }()
+
+	instruments, err := usHttp.sdkClient.InstrumentByTicker(context.Background(), ticker)
+	if err != nil || len(instruments) == 0 {
+		if len(instruments) == 0 {
+			err = errors.New("Zero length of instruments array")
+		}
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	client, err := sdk.NewStreamingClient(ctx.Logger(), usHttp.tinkoffToken)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	defer client.Close()
+
+	go func() {
+		if err := client.RunReadLoop(func(event interface{}) error {
+			fmt.Println(event)
+			if err := ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%v", event.(sdk.OrderBookEvent)))); err != nil {
+				return err
+			}
+			return nil
+		}); err != nil {
+			logger.Error(err)
+		}
+	}()
+	if err := client.SubscribeOrderbook(instruments[0].FIGI, 1, requestID()); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	time.Sleep(20 * time.Second)
+	logger.Info("оптиска от стакана")
+	if err := client.UnsubscribeOrderbook(instruments[0].FIGI, 1, requestID()); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return ctx.JSON(http.StatusOK, "kek")
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+// Генерируем уникальный ID для запроса
+func requestID() string {
+	b := make([]rune, 12)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+
+	return string(b)
 }

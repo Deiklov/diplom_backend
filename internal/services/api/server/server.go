@@ -50,10 +50,8 @@ func (serv *Server) Run() {
 
 	router := echo.New()
 	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		Skipper: middleware.DefaultSkipper,
-		AllowOrigins: []string{"https://localhost:80", "http://localhost:80", "https://bmstu-romanov.xyz",
-			"http://bmstu-romanov.xyz", "https://localhost:3000", "http://localhost:3000",
-			"http://23.111.206.228:80", "https://23.111.206.228:80", "http://23.111.206.228:8080", "https://23.111.206.228:8080"},
+		Skipper:      middleware.DefaultSkipper,
+		AllowOrigins: []string{"https://bmstu-romanov.xyz", "http://localhost:3000"},
 		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut,
 			http.MethodPatch, http.MethodPost, http.MethodDelete},
 		AllowHeaders:     nil,

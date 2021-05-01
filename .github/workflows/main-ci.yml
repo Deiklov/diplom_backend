@@ -8,6 +8,7 @@ on:
 jobs:
   create-envfile:
     runs-on: ubuntu-latest
+
     steps:
       - name: Make envfile
         uses: SpicyPizza/create-envfile@v1
@@ -19,6 +20,7 @@ jobs:
           file_name: .env
   build:
     runs-on: ubuntu-latest
+    needs: create-envfile
     steps:
       - uses: actions/checkout@v1
 

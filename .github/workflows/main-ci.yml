@@ -30,6 +30,8 @@ jobs:
       - name: Create Builder, application images
         run: |
           docker build -t ${{ secrets.DOCKERHUB_REPO }}:latest -f docker/api.Dockerfile .
+          ls
+          cat .env
 
       - name: Push application images
         run: |

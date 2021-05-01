@@ -20,7 +20,7 @@ RUN go build -o ./api .
 # Start fresh from a smaller image
 FROM alpine:3.9
 RUN apk add ca-certificates
-RUN ls
+RUN ls -lah
 COPY --from=build_base /app/api /app/api
 COPY config /app/config
 WORKDIR /app

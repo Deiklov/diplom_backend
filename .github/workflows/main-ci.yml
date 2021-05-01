@@ -28,13 +28,7 @@ jobs:
 
       - name: Create Builder, application images
         run: |
-          touch .env
-          echo POSTGRES_USER=${{ secrets.POSTGRES_USER }} >> .env
-          echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
-          echo POSTGRES_DB=${{ secrets.POSTGRES_DB }} >> .env
-          echo POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} >> .env
-          ls -lah
-          cat .env
+
           docker build -t ${{ secrets.DOCKERHUB_REPO }}:latest -f docker/api.Dockerfile .
 
 
@@ -60,5 +54,13 @@ jobs:
             export APICONTID=$(docker ps -q --filter "name=back-api")
             docker stop $APICONTID
             docker rm $APICONTID
-            docker run -d --network host --name back-api ${{ secrets.DOCKERHUB_REPO }}:latest
+            touch .env
+            echo POSTGRES_USER=${{ secrets.POSTGRES_USER }} > .env
+            echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
+            echo POSTGRES_DB=${{ secrets.POSTGRES_DB }} >> .env
+            echo POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} >> .env
+            ls -lah
+            cat .env
+            docker run -d --network host --env-file --name back-api ${{ secrets.DOCKERHUB_REPO }}:latest
             docker image prune -f
+            docker container prune -f

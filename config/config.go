@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
 
@@ -46,10 +45,10 @@ func ReadConfig() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	//err := godotenv.Load("main.env")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 	C.Database.DBName = os.Getenv("POSTGRES_DB")
 	C.Database.Password = os.Getenv("POSTGRES_PASSWORD")
 	C.Database.User = os.Getenv("POSTGRES_USER")

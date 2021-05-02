@@ -20,6 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"google.golang.org/grpc"
+	"log"
 	"net/http"
 	"os"
 )
@@ -41,11 +42,11 @@ func NewServer(ip string, port uint) *Server {
 
 func (serv *Server) Run() {
 	fmt.Println(func() string { dir, _ := os.Getwd(); return dir }())
-	connectionString := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable",
+	connectionString := fmt.Sprintf("postgres://%s:%s@%s:5432/%s",
 		serv.Conf.Database.User, serv.Conf.Database.Password, serv.Conf.Database.Addr, serv.Conf.Database.DBName)
 	pdb, err := goSQL.Open("pgx", connectionString)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	router := echo.New()

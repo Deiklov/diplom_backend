@@ -22,7 +22,7 @@ services:
 #      - "80:80"
 #      - "443:443"
   back-api:
-    image: golang:alpine
+    image: golang
     volumes:
     - .:/back
     working_dir: /back

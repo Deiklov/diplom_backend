@@ -37,7 +37,6 @@ func ReadConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println(err)
 		log.Fatalln(err)
 	}
 
@@ -49,10 +48,10 @@ func ReadConfig() {
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
-	C.Database.DBName = os.Getenv("POSTGRES_DB")
-	C.Database.Password = os.Getenv("POSTGRES_PASSWORD")
-	C.Database.User = os.Getenv("POSTGRES_USER")
-	C.Database.Addr = os.Getenv("POSTGRES_HOST")
+	Config.Database.DBName = os.Getenv("POSTGRES_DB")
+	Config.Database.Password = os.Getenv("POSTGRES_PASSWORD")
+	Config.Database.User = os.Getenv("POSTGRES_USER")
+	Config.Database.Addr = os.Getenv("POSTGRES_HOST")
 
 	spew.Dump(C)
 }

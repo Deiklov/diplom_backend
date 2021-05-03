@@ -104,6 +104,7 @@ func (rep *CompanyRepImpl) GetAllCompanies() ([]models.Company, error) {
 	sql, _, err := rep.goquDb.From("companies").Select("id", "name", "ipo", "country", "ticker").ToSQL()
 	companies := make([]models.Company, 0)
 	rows, err := rep.dbsqlx.Queryx(sql)
+	defer rows.Close()
 	for rows.Next() {
 		var cmpn models.Company
 

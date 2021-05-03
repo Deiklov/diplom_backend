@@ -42,6 +42,7 @@ func NewServer(ip string, port uint) *Server {
 
 func (serv *Server) Run() {
 	fmt.Println(func() string { dir, _ := os.Getwd(); return dir }())
+	logger.Info(serv.Conf.Database)
 	connectionString := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?ssldisable",
 		serv.Conf.Database.User, serv.Conf.Database.Password, serv.Conf.Database.Addr, serv.Conf.Database.DBName)
 	pdb, err := goSQL.Open("pgx", connectionString)

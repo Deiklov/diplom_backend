@@ -1,4 +1,5 @@
 from yahoo_finance import Share
+
 from keras.models import Sequential
 from keras.layers import LSTM
 from keras.layers import Dropout

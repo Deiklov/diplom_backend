@@ -6,6 +6,7 @@ import grpc
 import numpy as np
 # from analyze import StocksAnalyzer
 import prediction_pb2 as pb2
+# https://pypi.org/project/websocket_client/
 from prediction_pb2_grpc import PredictAPIServicer, add_PredictAPIServicer_to_server
 
 

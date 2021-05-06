@@ -65,7 +65,7 @@ func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql
 	router.DELETE("/api/v1/company/favorite", handler.DeleteFavorite, mwareJWT)
 	router.POST("/api/v1/company/favorite", handler.AddFavorite, mwareJWT)
 	router.GET("/api/v1/company/page/:slug", handler.PersonalCompanyPage)
-	router.GET("/api/v1/company/predict", handler.CompanyPredict, mwareJWT)
+	router.GET("/api/v1/company/predict/:slug", handler.CompanyPredict)
 	router.GET("/api/v1/companies/search/:slug", handler.CompanySearch)
 	router.GET("/api/v1/market/candles", handler.GetCandles)
 	router.GET("/api/v1/ws/market/candles/:slug", handler.GetRealTimeData)
@@ -169,8 +169,9 @@ func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 }
 
 func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
+	ticker := ctx.Param("slug")
 	query := diplom_backend.PredictionReq{
-		StocksName: "AAPL",
+		StocksName: ticker,
 		EndedTime:  pbtime.New(time.Now().Local().Add(2 * time.Hour)),
 		Step:       2,
 	}

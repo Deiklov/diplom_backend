@@ -2,15 +2,15 @@ from flask import Flask
 from flask import request
 import asyncio
 import math
+import tensorflow
 import numpy as np
 import tinvest as ti
 from datetime import datetime, timedelta
-from keras.models import Sequential
+from tensorflow.keras.models import Sequential
 import math
 from flask import jsonify
-import keras
 import pandas as pd
-from keras.layers import *
+from tensorflow.keras.layers import *
 from sklearn.preprocessing import MinMaxScaler
 
 app = Flask(__name__)

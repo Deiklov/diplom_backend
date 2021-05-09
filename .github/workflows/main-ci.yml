@@ -57,6 +57,7 @@ jobs:
             echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
             echo POSTGRES_DB=${{ secrets.POSTGRES_DB }} >> .env
             echo POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} >> .env
+            echo ML_HOST=${{ secrets.ML_HOST }} >> .env
             ls -lah
             docker run -d --network host --env-file main.env --name back-api ${{ secrets.DOCKERHUB_REPO }}:latest
             docker image prune -f

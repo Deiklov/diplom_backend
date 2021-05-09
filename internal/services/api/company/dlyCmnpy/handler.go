@@ -7,7 +7,6 @@ import (
 	"github.com/Deiklov/diplom_backend/internal/common"
 	"github.com/Deiklov/diplom_backend/internal/models"
 	"github.com/Deiklov/diplom_backend/internal/services/api/company"
-	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
 	"github.com/Finnhub-Stock-API/finnhub-go"
 	sdk "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
@@ -21,9 +20,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
-	pbtime "google.golang.org/protobuf/types/known/timestamppb"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 )
 
@@ -33,7 +34,6 @@ type CompanyHttp struct {
 	goquDb  *goqu.Database
 	dbsqlx  *sqlx.DB
 	common.UserGetter
-	predictCL     diplom_backend.PredictAPIClient
 	finnhubClient *finnhub.DefaultApiService
 	FNapiKey      string
 	common.CmpnyHelper
@@ -41,21 +41,30 @@ type CompanyHttp struct {
 	tinkoffToken  string
 	tinkoffAPIWS  string
 	sdkClient     *sdk.SandboxRestClient
+	httpCli       *http.Client
 }
 
-func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, client diplom_backend.PredictAPIClient, fnClient *finnhub.DefaultApiService, apiKey string) {
+func AddRoutesWithHandler(router *echo.Echo, useCase company.CompanyUCI, db *sql.DB, fnClient *finnhub.DefaultApiService, apiKey string) {
 	handler := &CompanyHttp{
 		UseCase:       useCase,
 		DB:            db,
 		dbsqlx:        sqlx.NewDb(db, "postgres"),
 		goquDb:        goqu.New("postgres", db),
-		predictCL:     client,
 		finnhubClient: fnClient,
 		FNapiKey:      apiKey,
 		tinkoffAPIURL: "https://api-invest.tinkoff.ru/openapi/sandbox",
 		tinkoffToken:  "t.UE-TeGMgnVeOVaoBYl7uk33-QtM9k2KwZTc7VyI1ubJErMxsVQvmYb92eRa157bm6XPjx74NGDIYfxSecNrdEQ",
 		tinkoffAPIWS:  "wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws",
 		sdkClient:     sdk.NewSandboxRestClient("t.UE-TeGMgnVeOVaoBYl7uk33-QtM9k2KwZTc7VyI1ubJErMxsVQvmYb92eRa157bm6XPjx74NGDIYfxSecNrdEQ"),
+	}
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConns = 100
+	t.MaxConnsPerHost = 100
+	t.MaxIdleConnsPerHost = 100
+
+	handler.httpCli = &http.Client{
+		Timeout:   200 * time.Second,
+		Transport: t,
 	}
 	mwareJWT := middleware.JWT([]byte("bc06c2d9-00cd-49e0-9f94-ef9257713803"))
 
@@ -84,11 +93,19 @@ func (usHttp *CompanyHttp) Create(ctx echo.Context) error {
 	auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
 		Key: usHttp.FNapiKey,
 	})
+	instr, err := usHttp.sdkClient.InstrumentByTicker(context.Background(), cmpny.Name)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if len(instr) == 0 {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, "That ticker doesn't exist in Tinkoff API")
+	}
 	profile2, resp, err := usHttp.finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(cmpny.Name)})
 	//при плохом ответе длина будет 2, берем с запасом
 	if resp == nil || resp.ContentLength != -1 {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity,
-			"Stocks with such ticker doesn't exist")
+			"Stocks with such ticker doesn't exist in FinhubAPI")
 	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, err.Error())
@@ -170,17 +187,28 @@ func (usHttp *CompanyHttp) PersonalCompanyPage(ctx echo.Context) error {
 
 func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
 	ticker := ctx.Param("slug")
-	query := diplom_backend.PredictionReq{
-		StocksName: ticker,
-		EndedTime:  pbtime.New(time.Now().Local().Add(2 * time.Hour)),
-		Step:       2,
+	instr, err := usHttp.sdkClient.InstrumentByTicker(context.Background(), ticker)
+	if len(instr) == 0 {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, "That ticker doesn't exist in Tinkoff API")
 	}
-	resp, err := usHttp.predictCL.Predict(ctx.Request().Context(), &query)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	return ctx.JSON(http.StatusOK, resp.TimeSeries)
 
+	u := &url.URL{
+		Scheme: "http",
+		Host:   os.Getenv("ML_HOST"),
+		Path:   fmt.Sprintf("predict/%s", instr[0].FIGI),
+	}
+	q := u.Query()
+	q.Set("to", time.Now().Add(2*time.Hour).Format(time.RFC3339))
+	q.Set("interval", string(sdk.CandleInterval1Min))
+	u.RawQuery = q.Encode()
+
+	resp, err := usHttp.httpCli.Get(u.String())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	return ctx.JSONBlob(http.StatusOK, body)
 }
 
 //поиск только по slug

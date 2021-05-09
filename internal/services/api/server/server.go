@@ -10,7 +10,6 @@ import (
 	httpUser "github.com/Deiklov/diplom_backend/internal/services/api/user/delivery/http"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/repUser"
 	"github.com/Deiklov/diplom_backend/internal/services/api/user/ucUser"
-	diplom_backend "github.com/Deiklov/diplom_backend/internal/services/prediction/pb"
 	"github.com/Deiklov/diplom_backend/pkg/logger"
 	"github.com/Finnhub-Stock-API/finnhub-go"
 	"github.com/getsentry/sentry-go"
@@ -19,7 +18,6 @@ import (
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"google.golang.org/grpc"
 	"log"
 	"net/http"
 	"os"
@@ -128,14 +126,6 @@ func (serv *Server) Run() {
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(router)
 
-	addr := "localhost:9999"
-	conn, err := grpc.Dial(addr, grpc.WithInsecure())
-	if err != nil {
-		logger.Warn(err)
-	}
-	defer conn.Close()
-	client := diplom_backend.NewPredictAPIClient(conn)
-
 	finnhubClient := finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi
 
 	userRepo := repUser.CreateRepository(pdb)
@@ -145,7 +135,7 @@ func (serv *Server) Run() {
 	cmpnyRepo := repCmpny.CreateRepCmpny(pdb)
 	cmpnyUCase := ucCmnpy.CreateUseCase(cmpnyRepo)
 	//принимает репозиторий, чтобы быстрее шла разработка
-	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase, pdb, client, finnhubClient, "c0ilbh748v6ot9ddgc0g")
+	dlyCmnpy.AddRoutesWithHandler(router, cmpnyUCase, pdb, finnhubClient, "c0ilbh748v6ot9ddgc0g")
 
 	router.Logger.Fatal(router.Start(":8080"))
 

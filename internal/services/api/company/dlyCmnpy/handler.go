@@ -191,10 +191,13 @@ func (usHttp *CompanyHttp) CompanyPredict(ctx echo.Context) error {
 	if len(instr) == 0 {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "That ticker doesn't exist in Tinkoff API")
 	}
-
+	mlHost := "195.19.43.12:5000"
+	if os.Getenv("ML_HOST") != "" {
+		mlHost = os.Getenv("ML_HOST")
+	}
 	u := &url.URL{
 		Scheme: "http",
-		Host:   os.Getenv("ML_HOST"),
+		Host:   mlHost,
 		Path:   fmt.Sprintf("predict/%s", instr[0].FIGI),
 	}
 	q := u.Query()

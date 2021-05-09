@@ -1,17 +1,17 @@
 from flask import Flask
 from flask import request
-import asyncio
-import math
-import tensorflow
 import numpy as np
 import tinvest as ti
 from datetime import datetime, timedelta
-from tensorflow.keras.models import Sequential
 import math
 from flask import jsonify
 import pandas as pd
-from tensorflow.keras.layers import *
 from sklearn.preprocessing import MinMaxScaler
+import os
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dropout, Dense
+from tensorflow.python.client import device_lib
 
 app = Flask(__name__)
 
@@ -116,4 +116,13 @@ def predict(figi: str):
 
 
 if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"  # Or 2, 3, etc. other than 0
+
+    # On CPU/GPU placement
+    config = tf.compat.v1.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+    config.gpu_options.allow_growth = True
+    tf.compat.v1.Session(config=config)
+
+    print(device_lib.list_local_devices())
+
     app.run(host='0.0.0.0')

@@ -69,7 +69,7 @@ def predict(figi: str):
 
     model.compile(optimizer='adam', loss='mean_squared_error')
 
-    model.fit(X_train, y_train, epochs=30, batch_size=24, verbose=0)
+    model.fit(X_train, y_train, epochs=20, batch_size=24, verbose=0)
     df_volume = np.vstack((train, test))
     num_2 = df_volume.shape[0] - num_shape + window
 
@@ -109,7 +109,7 @@ def predict(figi: str):
 
     result = []
     for ind, val in zip(df_date['Date'][len(close_full_y):], prediction_full):
-        mda = dict({ind: float(val)})
+        mda = dict({"pred_close": float(val), "time": ind})
         result.append(mda)
     return jsonify(result)
     # print(json.dumps(result))

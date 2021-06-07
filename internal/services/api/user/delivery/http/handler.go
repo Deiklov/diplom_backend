@@ -105,10 +105,26 @@ func (usHttp *UserHttp) Update(ctx echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	//принимаем инфу об аватарке
+	profile := models.Profile{}
+	if err := ctx.Bind(&profile); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Can't parse user data")
+	}
+	_, err = govalidator.ValidateStruct(profile)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
 	userFromDB, err := usHttp.UseCase.Update(&usr)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	if len(profile.AvatarBinary) > 0 {
+		err := usHttp.UseCase.UploadAvatar(&profile, profile.AvatarBinary)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+	}
+
 	return ctx.JSON(http.StatusOK, userFromDB)
 }
 

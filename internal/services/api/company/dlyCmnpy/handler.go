@@ -3,6 +3,7 @@ package dlyCmnpy
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/Deiklov/diplom_backend/internal/common"
 	"github.com/Deiklov/diplom_backend/internal/models"
@@ -25,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -287,6 +289,7 @@ func (usHttp *CompanyHttp) GetRealTimeData(ctx echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
+
 	defer func() { _ = ws.Close() }()
 
 	instruments, err := usHttp.sdkClient.InstrumentByTicker(context.Background(), ticker)
@@ -302,15 +305,51 @@ func (usHttp *CompanyHttp) GetRealTimeData(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	defer client.Close()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	////ws.SetCloseHandler(func(code int, text string) error {
+	//logger.Info("closing ws: ", code, text)
+	////	wg.Done()
+	////	return nil
+	////})
+	wsclose := make(chan int)
 
 	go func() {
+		select {
+		case <-wsclose:
+			wg.Done()
+		case <-time.After(60 * time.Second):
+			logger.Info("closing ws after timeout")
+		}
+	}()
+
+	go func() {
+		typemsg, _, _ := ws.ReadMessage()
+		wsclose <- typemsg
+	}()
+
+	go func() {
+		counter := 1
 		if err := client.RunReadLoop(func(event interface{}) error {
 			fmt.Println(event)
-			if err := ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%v", event.(sdk.OrderBookEvent)))); err != nil {
+			obj := models.CompanyGlass{
+				Price: event.(sdk.OrderBookEvent).OrderBook.Bids[0][0],
+				Time:  event.(sdk.OrderBookEvent).Time,
+			}
+			data, err := json.Marshal(obj)
+			if err != nil {
 				return err
+			}
+			//пишем каждый 3 апдейт примерно раз в секунду
+			counter += 1
+			if counter%2 == 0 {
+				if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
+					return err
+				}
 			}
 			return nil
 		}); err != nil {
+			//wg.Done()
 			logger.Error(err)
 		}
 	}()
@@ -318,13 +357,14 @@ func (usHttp *CompanyHttp) GetRealTimeData(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	time.Sleep(20 * time.Second)
-	logger.Info("оптиска от стакана")
+	wg.Wait()
+	//time.Sleep(15 * time.Second)
+	logger.Info("отписка от стакана")
 	if err := client.UnsubscribeOrderbook(instruments[0].FIGI, 1, requestID()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return ctx.JSON(http.StatusOK, "kek")
+	return ctx.JSON(http.StatusOK, "streaming window ended")
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

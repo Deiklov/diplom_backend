@@ -1,155 +1,90 @@
-import keras.models
-import numpy as np
-import pandas as pd
+import math
+import os
 import matplotlib.pyplot as plt
-from datetime import datetime
-from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout, GRU
-from keras.layers import *
+import tensorflow.keras.models
+import pandas as pd
+import numpy as np
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import *
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
-from keras.callbacks import EarlyStopping
-from keras.optimizers import Adam, SGD
+from tensorflow.keras.callbacks import EarlyStopping
+
 from tensorflow.python.client import device_lib
 
 print(device_lib.list_local_devices())
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+
 df = pd.read_csv("TSLA.csv")
-df = df.sort_values('Date').reset_index(drop=True)
-df.head()
-print(df.shape)
-df['Close'] = df['Close'].astype(float)
+print('Number of rows and columns:', df.shape)
+df.head(5)
+training_set = df.iloc[:800, 1:2].values
+test_set = df.iloc[800:, 1:2].values
 
-plt.figure(figsize=(20, 7))
-plt.plot(df['Date'].values, df['Close'].values, label='Tesla Stock Price', color='red')
-plt.xticks(np.arange(100, df.shape[0], 200))
-plt.xlabel('Date')
-plt.ylabel('Price ($)')
-plt.legend()
-plt.show()
-num_shape = 1300
-
-train = df.iloc[:num_shape, 1:2].values
-test = df.iloc[num_shape:, 1:2].values
-
+# Feature Scaling
 sc = MinMaxScaler(feature_range=(0, 1))
-train_scaled = sc.fit_transform(train)
+training_set_scaled = sc.fit_transform(training_set)
+# Creating a data structure with 60 time-steps and 1 output
 X_train = []
-
-# Price on next day
 y_train = []
-
-window = 60
-
-for i in range(window, num_shape):
-    X_train_ = np.reshape(train_scaled[i - window:i, 0], (window, 1))
-    X_train.append(X_train_)
-    y_train.append(train_scaled[i, 0])
-X_train = np.stack(X_train)
-y_train = np.stack(y_train)
+for i in range(60, 800):
+    X_train.append(training_set_scaled[i - 60:i, 0])
+    y_train.append(training_set_scaled[i, 0])
+X_train, y_train = np.array(X_train), np.array(y_train)
+X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+# (740, 60, 1)
 
 model = Sequential()
-
+# Adding the first LSTM layer and some Dropout regularisation
 model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
 model.add(Dropout(0.2))
-
+# Adding a second LSTM layer and some Dropout regularisation
 model.add(LSTM(units=50, return_sequences=True))
 model.add(Dropout(0.2))
-
+# Adding a third LSTM layer and some Dropout regularisation
 model.add(LSTM(units=50, return_sequences=True))
 model.add(Dropout(0.2))
-
+# Adding a fourth LSTM layer and some Dropout regularisation
 model.add(LSTM(units=50))
 model.add(Dropout(0.2))
-
+# Adding the output layer
 model.add(Dense(units=1))
 
+# Compiling the RNN
 model.compile(optimizer='adam', loss='mean_squared_error')
 
-model.fit(X_train, y_train, epochs=4, batch_size=32)
-# model.save("model")
-df_volume = np.vstack((train, test))
+# Fitting the RNN to the Training set
+model.fit(X_train, y_train, epochs=100, batch_size=32)
 
-inputs = df_volume[df_volume.shape[0] - test.shape[0] - window:]
+# Getting the predicted stock price of 2017
+dataset_train = df.iloc[:800, 1:2]
+dataset_test = df.iloc[800:, 1:2]
+dataset_total = pd.concat((dataset_train, dataset_test), axis=0)
+inputs = dataset_total[len(dataset_total) - len(dataset_test) - 60:].values
 inputs = inputs.reshape(-1, 1)
 inputs = sc.transform(inputs)
-
-num_2 = df_volume.shape[0] - num_shape + window
-
 X_test = []
+for i in range(60, 519):
+    X_test.append(inputs[i - 60:i, 0])
+X_test = np.array(X_test)
+X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+print(X_test.shape)
+# (459, 60, 1)
 
-for i in range(window, num_2):
-    X_test_ = np.reshape(inputs[i - window:i, 0], (window, 1))
-    X_test.append(X_test_)
-
-X_test = np.stack(X_test)
-predict = model.predict(X_test)
-predict = sc.inverse_transform(predict)
-# diff = predict - test
-
-# print("MSE:", np.mean(diff ** 2))
-# print("MAE:", np.mean(abs(diff)))
-# print("RMSE:", np.sqrt(np.mean(diff ** 2)))
-# result = list(zip(df['Date'].values[1300:], predict))
-# plt.figure(figsize=(20, 7))
-# plt.plot(df['Date'].values[1300:], df_volume[1300:], color='red', label='Real Tesla Stock Price')
-# plt.plot(df['Date'][-predict.shape[0]:].values, predict, color='blue', label='Predicted Tesla Stock Price')
-# plt.xticks(np.arange(0, df['Date'].values[1300:].shape[0], 10))
-# plt.title('Tesla Stock Price Prediction')
-# plt.xlabel('Date')
-# plt.ylabel('Price ($)')
-# plt.legend()
-# plt.show()
-
-pred_ = predict[-1].copy()
-prediction_full = []
-window = 60
-df_copy = df.iloc[:, 1:2][1:].values
-
-for j in range(20):
-    df_ = np.vstack((df_copy, pred_))
-    train_ = df_[:num_shape]
-    test_ = df_[num_shape:]
-
-    df_volume_ = np.vstack((train_, test_))
-
-    inputs_ = df_volume_[df_volume_.shape[0] - test_.shape[0] - window:]
-    inputs_ = inputs_.reshape(-1, 1)
-    inputs_ = sc.transform(inputs_)
-
-    X_test_2 = []
-
-    for k in range(window, num_2):
-        X_test_3 = np.reshape(inputs_[k - window:k, 0], (window, 1))
-        X_test_2.append(X_test_3)
-
-    X_test_ = np.stack(X_test_2)
-    predict_ = model.predict(X_test_)
-    pred_ = sc.inverse_transform(predict_)
-    prediction_full.append(pred_[-1][0])
-    df_copy = df_[j:]
-prediction_full_new = np.vstack((predict, np.array(prediction_full).reshape(-1, 1)))
-df_date = df[['Date']]
-
-for h in range(20):
-    df_date_add = pd.to_datetime(df_date['Date'].iloc[-1]) + pd.DateOffset(days=1)
-    df_date_add = pd.DataFrame([df_date_add.strftime("%Y-%m-%d")], columns=['Date'])
-    df_date = df_date.append(df_date_add)
-df_date = df_date.reset_index(drop=True)
-import json
-
-result = []
-for ind, val in zip(df_date['Date'][1511:], prediction_full):
-    mda = dict({ind: float(val)})
-    result.append(mda)
-print(json.dumps(result))
-# plt.figure(figsize=(20, 7))
-# plt.plot(df['Date'].values[1300:], df_volume[1300:], color='red', label='Real Tesla Stock Price')
-# plt.plot(df_date['Date'][-prediction_full_new.shape[0]:].values, prediction_full_new, color='blue',
-#          label='Predicted Tesla Stock Price')
-# plt.xticks(np.arange(0, df['Date'].values[1300:].shape[0], 10))
-# plt.title('Tesla Stock Price Prediction')
-# plt.xlabel('Date')
-# plt.ylabel('Price ($)')
-# plt.legend()
-# plt.show()
+predicted_stock_price = model.predict(X_test)
+predicted_stock_price = sc.inverse_transform(predicted_stock_price)
+# Visualising the results
+plt.plot(df.loc[800:, 'Date'], dataset_test.values, color='red', label='Real TESLA Stock Price')
+plt.plot(df.loc[800:, 'Date'], predicted_stock_price, color='blue', label='Predicted TESLA Stock Price')
+plt.xticks(np.arange(0, 459, 50))
+plt.title('TESLA Stock Price Prediction')
+plt.xlabel('Time')
+plt.ylabel('TESLA Stock Price')
+plt.legend()
+plt.show()

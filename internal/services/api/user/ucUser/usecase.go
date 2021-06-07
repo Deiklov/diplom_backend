@@ -43,3 +43,6 @@ func (uc *userUCase) GetByID(uid string) (*models.User, error) {
 func (uc *userUCase) Delete(uid string) error {
 	return uc.userRepo.Delete(uid)
 }
+func (uc *userUCase) UploadAvatar(user *models.Profile, image []byte) error {
+	return nil
+}

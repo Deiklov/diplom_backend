@@ -43,6 +43,10 @@ type (
 			} `json:"instruments"`
 		} `json:"payload"`
 	}
+	CompanyGlass struct {
+		Price float64   `json:"c"`
+		Time  time.Time `json:"time"`
+	}
 )
 
 //для json scan

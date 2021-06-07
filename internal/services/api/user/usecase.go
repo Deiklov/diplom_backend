@@ -10,4 +10,5 @@ type UseCase interface {
 	GetByEmail(email string) (*models.User, error)
 	Delete(id string) error
 	Update(user *models.User) (*models.User, error)
+	UploadAvatar(user *models.Profile, image []byte) error
 }
